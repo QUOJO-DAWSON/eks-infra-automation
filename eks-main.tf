@@ -109,8 +109,15 @@ module "eks" {
     dev = {
       instance_types = ["t2.large"]
       min_size       = 2
-      max_size       = 6
+      max_size       = 5
       desired_size   = 3
+
+      tags = {
+        "k8s.io/cluster-autoscaler/enabled"                         = "true"
+        "k8s.io/cluster-autoscaler/${var.project_name}-eks-cluster" = "owned"
+      }
+    }
+  }
 
   node_security_group_additional_rules = {
 
@@ -135,14 +142,9 @@ module "eks" {
     }
   }
 
-      tags = {
-        "k8s.io/cluster-autoscaler/enabled"                         = "true"
-        "k8s.io/cluster-autoscaler/${var.project_name}-eks-cluster" = "owned"
-
-        environment = "development"
-        application = "${var.project_name}"
-      }
-    }
+  tags = {
+    environment = "development"
+    application = "${var.project_name}"
   }
 }
 
