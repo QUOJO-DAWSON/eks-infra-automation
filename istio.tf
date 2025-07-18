@@ -21,7 +21,7 @@ resource "helm_release" "istiod" {
 }
 
 # 3. Install istio-ingressgateway last (data plane)
-resource "helm_release" "istio-ingressgateway" {
+resource "helm_release" "istio-ingressgate" {
   name             = "istio-ingressgateway"
   repository       = "https://istio-release.storage.googleapis.com/charts"
   chart            = "gateway"
