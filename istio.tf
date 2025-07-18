@@ -19,19 +19,3 @@ resource "helm_release" "istiod" {
   namespace        = "istio-system"
   depends_on       = [helm_release.istio-base]
 }
-
-# 3. Install istio-ingressgateway last (data plane)
-resource "helm_release" "istio-ingressgateway" {
-  name             = "istio-ingressgateway"
-  repository       = "https://istio-release.storage.googleapis.com/charts"
-  chart            = "gateway"
-  version          = "1.26.2"
-  create_namespace = true
-  namespace        = "istio-ingress"
-  depends_on       = [helm_release.istiod]
-
-  values = [
-    file("${path.module}/istio-gateway-values.yaml")
-  ]
-
-}
