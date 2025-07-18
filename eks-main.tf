@@ -24,8 +24,8 @@ module "vpc" {
 
   tags = {
     "kubernetes.io/cluster/${var.project_name}-eks-cluster" = "shared" # Tags required for EKS to discover subnets
-    environment = "development"
-    application = "${var.project_name}"
+    environment                                             = "development"
+    application                                             = "${var.project_name}"
   }
 
   public_subnet_tags = {
