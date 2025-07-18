@@ -39,3 +39,104 @@ module "vpc" {
   }
 
 }
+
+#EKS for Cluster
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 20.37"
+
+  cluster_name    = "${var.project_name}-eks-cluster"
+  cluster_version = var.cluster_version
+
+  subnet_ids = module.vpc.private_subnets
+  vpc_id     = module.vpc.vpc_id
+
+  cluster_endpoint_public_access = true
+
+  # Ensure proper dependency order
+  depends_on = [module.vpc, aws_iam_role.external-admin, aws_iam_role.external-developer]
+
+  cluster_addons = {
+    coredns                = {}
+    eks-pod-identity-agent = {}
+    kube-proxy             = {}
+    vpc-cni                = {}
+  }
+
+
+  # Set authentication mode to API
+  authentication_mode = "API"
+
+  # Adds the current caller identity as an administrator via cluster access entry
+  enable_cluster_creator_admin_permissions = true
+
+  # Add access entries
+  access_entries = {
+    admin = {
+      principal_arn = aws_iam_role.external-admin.arn
+      username      = "admin"
+      type          = "STANDARD"
+
+      # Grant admin access with view-only permissions
+      policy_associations = {
+        viewer = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+    developer = {
+      principal_arn = aws_iam_role.external-developer.arn
+      username      = "developer"
+      type          = "STANDARD"
+
+      # Grant developer access with view-only permissions to specific namespace
+      policy_associations = {
+        viewer = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+          access_scope = {
+            type       = "namespace"
+            namespaces = ["online-boutique"]
+          }
+        }
+      }
+    }
+  }
+
+
+  eks_managed_node_groups = {
+    dev = {
+      instance_types = ["t2.large"]
+      min_size       = 2
+      max_size       = 5
+      desired_size   = 3
+
+      tags = {
+        "k8s.io/cluster-autoscaler/enabled"                         = "true"
+        "k8s.io/cluster-autoscaler/${var.project_name}-eks-cluster" = "owned"
+
+        environment = "development"
+        application = "${var.project_name}"
+      }
+    }
+  }
+}
+
+#module "eks_blueprints_addons" {
+#  depends_on = [module.eks]
+#  source     = "aws-ia/eks-blueprints-addons/aws"
+#  version    = "~> 1.21"
+#
+#  cluster_name      = module.eks.cluster_name
+#  cluster_endpoint  = module.eks.cluster_endpoint
+#  cluster_version   = module.eks.cluster_version
+#  oidc_provider_arn = module.eks.oidc_provider_arn
+#
+#  enable_aws_load_balancer_controller = false
+#  enable_metrics_server               = false
+#  enable_cluster_autoscaler           = false
+#  enable_external_secrets             = false
+#
+#}
