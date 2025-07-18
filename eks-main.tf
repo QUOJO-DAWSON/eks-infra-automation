@@ -105,7 +105,6 @@ module "eks" {
     }
   }
 
-
   eks_managed_node_groups = {
     dev = {
       instance_types = ["t2.large"]
