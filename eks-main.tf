@@ -37,7 +37,6 @@ module "vpc" {
     "kubernetes.io/cluster/${var.project_name}-eks-cluster" = "shared"
     "kubernetes.io/role/internal-elb"                       = 1 # Identifies this subnet for internal services
   }
-
 }
 
 #EKS for Cluster
@@ -62,7 +61,6 @@ module "eks" {
     kube-proxy             = {}
     vpc-cni                = {}
   }
-
 
   # Set authentication mode to API
   authentication_mode = "API"
