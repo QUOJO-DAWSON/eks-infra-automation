@@ -33,4 +33,5 @@ resource "helm_release" "istio-ingressgateway" {
   values = [
     file("${path.module}/istio-gateway-values.yaml")
   ]
+
 }
