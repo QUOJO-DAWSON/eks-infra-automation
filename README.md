@@ -1,6 +1,6 @@
 # EKS Infrastructure Automation
 
-This repository contains Terraform code to automate the deployment of an Amazon EKS cluster with various add-ons and configurations for running containerized applications.
+This repository contains Terraform code to automate the deployment of an Amazon EKS cluster with various add-ons and configurations for running containerized applications on AWS.
 
 ## Architecture Overview
 
@@ -8,20 +8,13 @@ The infrastructure includes:
 
 - Amazon EKS cluster (v1.33) with managed node groups
 - VPC with public and private subnets across multiple availability zones
-- Service mesh with Istio
+- Service mesh with Istio and Istio Gateway
 - GitOps with ArgoCD
 - Various Kubernetes add-ons:
   - AWS Load Balancer Controller
   - Cluster Autoscaler
   - External Secrets Operator
   - Metrics Server
-
-## Prerequisites
-
-- AWS CLI configured with appropriate permissions
-- Terraform v1.12.0 or later
-- kubectl
-- helm
 
 ## Features
 
@@ -35,6 +28,34 @@ The infrastructure includes:
 - **Metrics Server**: Resource usage metrics for Kubernetes.
 - **IAM Roles**: Fine-grained access control for Kubernetes workloads.
 
+## Tools and Technologies Used
+
+### Infrastructure as Code
+- **Terraform**: For provisioning and managing AWS resources
+- **Helm**: Package manager for Kubernetes
+- **Kustomize**: Kubernetes configuration customization
+
+### AWS Services
+- **Amazon EKS**: Managed Kubernetes service
+- **Amazon VPC**: Networking infrastructure
+- **Amazon EC2**: Compute resources for EKS nodes
+- **AWS IAM**: Identity and access management
+- **AWS Load Balancer**: For exposing services
+- **AWS Secrets Manager**: For managing secrets
+
+### Kubernetes & DevOps
+- **Kubernetes**: Container orchestration
+- **ArgoCD**: GitOps continuous delivery
+- **Istio**: Service mesh implementation with gateway
+- **GitHub Actions**: CI/CD pipeline
+
+## Prerequisites
+
+- AWS CLI configured with appropriate permissions
+- Terraform v1.12.0 or later
+- kubectl command-line tool
+- Helm package manager
+
 ## Repository Structure
 
 ```
@@ -47,7 +68,7 @@ eks-infra-automation/
 │   ├── cluster-resources-argo-app.yaml     # ArgoCD app for cluster resources
 │   └── online-boutique-argo-app.yaml       # ArgoCD app for demo microservices
 ├── backend/                                # Terraform backend configuration
-│   ├── main.tf                             # S3 and DynamoDB backend setup
+│   ├── main.tf                             # S3 backend with native state locking setup
 │   └── outputs.tf                          # Backend outputs
 ├── argocd.tf                               # ArgoCD Helm deployment
 ├── aws-load-balancer-controller.tf         # AWS Load Balancer Controller deployment
@@ -56,7 +77,7 @@ eks-infra-automation/
 ├── external-secrets.tf                     # External Secrets Operator deployment
 ├── iam-roles.tf                            # IAM roles for cluster access
 ├── istio-gateway-values.yaml               # Istio gateway configuration values
-├── istio.tf                                # Istio service mesh deployment
+├── istio.tf                                # Istio service mesh and gateway deployment
 ├── kube-resources.tf                       # Kubernetes resources configuration
 ├── metrics-server.tf                       # Metrics Server deployment
 ├── outputs.tf                              # Terraform outputs
@@ -68,7 +89,7 @@ eks-infra-automation/
 
 ### Automated Deployment (GitHub Actions)
 
-The repository is configured with GitHub Actions workflows for automated deployment:
+The repository is configured with GitHub Actions workflows for automated deployment. The workflows follow this sequence:
 
 1. **Bootstrap Backend**: Sets up the Terraform backend (S3 bucket with native state locking)
 2. **Deploy Infrastructure**: Validates, plans, and applies the Terraform configuration
@@ -102,7 +123,7 @@ To use the GitHub Actions workflows, you need to configure the following in your
    - `AWS_REGION`: AWS region for deployment (e.g., `us-east-1`)
 
 3. **AWS OIDC Configuration**:
-   - Configure AWS OIDC provider for GitHub Actions to assume roles without storing AWS credentials
+   - Configure AWS OIDC provider for GitHub Actions to assume roles without storing AWS credentials in GitHub
 
 ### Manual Deployment
 
@@ -125,10 +146,10 @@ terraform destroy -var="user_for_admin_role=<admin-user-arn>" -var="user_for_dev
 ### EKS Cluster
 
 The EKS cluster is configured with:
-- Version 1.33
-- Managed node groups with t2.large instances
-- Autoscaling from 2 to 5 nodes
-- IAM roles for cluster access
+- Kubernetes version 1.33
+- Managed node groups with t2.large EC2 instances
+- Node autoscaling from 2 to 5 nodes based on workload
+- IAM roles for secure cluster access
 
 ### Service Mesh
 
@@ -183,9 +204,11 @@ The following variables can be customized to configure your deployment:
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/your-feature-name`)
 3. Make your changes
-4. Submit a pull request
+4. Commit your changes (`git commit -m 'Add some feature'`)
+5. Push to the branch (`git push origin feature/your-feature-name`)
+6. Submit a pull request
 
 ## License
 
