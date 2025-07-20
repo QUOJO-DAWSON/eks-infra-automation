@@ -66,7 +66,7 @@ module "eks" {
   authentication_mode = "API"
 
   # Adds the current caller identity as an administrator via cluster access entry
-  #enable_cluster_creator_admin_permissions = true
+  enable_cluster_creator_admin_permissions = true
 
   # Add access entries
   access_entries = {
