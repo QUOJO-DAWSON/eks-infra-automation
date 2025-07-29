@@ -15,7 +15,7 @@ The infrastructure includes:
   - Cluster Autoscaler
   - External Secrets Operator
   - Metrics Server
-  - Prometheus monitoring stack
+  - Prometheus monitoring stack with AlertManager and Grafana
 
 ## Features
 
@@ -27,7 +27,7 @@ The infrastructure includes:
 - **Istio**: Service mesh for traffic management, security, and observability.
 - **Istio Gateway**: Ingress gateway for managing external traffic into the service mesh.
 - **Metrics Server**: Resource usage metrics for Kubernetes.
-- **Prometheus**: Monitoring and alerting toolkit with Grafana dashboards.
+- **Prometheus**: Monitoring and alerting toolkit with Grafana dashboards and AlertManager.
 - **IAM Roles**: Fine-grained access control for Kubernetes workloads.
 
 ## Tools and Technologies Used
@@ -49,6 +49,9 @@ The infrastructure includes:
 - **Kubernetes**: Container orchestration
 - **ArgoCD**: GitOps continuous delivery
 - **Istio**: Service mesh implementation with gateway
+- **Prometheus**: Metrics collection and monitoring
+- **Grafana**: Visualization and dashboards
+- **AlertManager**: Alert routing and notifications
 - **GitHub Actions**: CI/CD pipeline
 
 ## Prerequisites
@@ -161,6 +164,14 @@ Istio is deployed as the service mesh solution with:
 - Control plane (istiod)
 - Data plane (ingress gateway)
 
+### Monitoring and Observability
+
+Prometheus stack is deployed with:
+- Prometheus server for metrics collection and observability
+- Grafana for visualization and dashboards
+- AlertManager for alert routing and notifications
+- ServiceMonitors for automatic service discovery
+
 ### GitOps
 
 ArgoCD is configured to manage:
@@ -208,6 +219,14 @@ kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 Then visit: `http://localhost:3000`
 - Username: `admin`
 - Password: Use the password retrieved above
+
+### AlertManager
+
+**Access AlertManager UI:**
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093
+```
+Then visit: `http://localhost:9093`
 
 ## Access Management
 
