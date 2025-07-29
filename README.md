@@ -169,6 +169,46 @@ ArgoCD is configured to manage:
 
 > **Note**: The repository includes commented code for configuring ArgoCD with private Git repositories. If you need to use private repositories, uncomment the relevant sections in `argocd.tf` and `variables.tf`, and provide the required secrets in GitHub Actions. These variables will be passed to Terraform through the GitHub Actions workflow.
 
+## Accessing Web UIs
+
+### ArgoCD
+
+**Get ArgoCD admin password:**
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+```
+
+**Access ArgoCD UI:**
+```bash
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+```
+Then visit: `https://localhost:8080`
+- Username: `admin`
+- Password: Use the password retrieved above
+
+### Prometheus
+
+**Access Prometheus UI:**
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+```
+Then visit: `http://localhost:9090`
+
+### Grafana
+
+**Get Grafana admin password:**
+```bash
+kubectl get secret -n monitoring kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 -d
+```
+
+**Access Grafana UI:**
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+```
+Then visit: `http://localhost:3000`
+- Username: `admin`
+- Password: Use the password retrieved above
+
 ## Access Management
 
 The cluster is configured with two access roles:
