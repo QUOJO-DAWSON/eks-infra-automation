@@ -15,6 +15,7 @@ The infrastructure includes:
   - Cluster Autoscaler
   - External Secrets Operator
   - Metrics Server
+  - Prometheus monitoring stack
 
 ## Features
 
@@ -26,6 +27,7 @@ The infrastructure includes:
 - **Istio**: Service mesh for traffic management, security, and observability.
 - **Istio Gateway**: Ingress gateway for managing external traffic into the service mesh.
 - **Metrics Server**: Resource usage metrics for Kubernetes.
+- **Prometheus**: Monitoring and alerting toolkit with Grafana dashboards.
 - **IAM Roles**: Fine-grained access control for Kubernetes workloads.
 
 ## Tools and Technologies Used
@@ -80,6 +82,7 @@ eks-infra-automation/
 ├── istio.tf                                # Istio service mesh and gateway deployment
 ├── kube-resources.tf                       # Kubernetes resources configuration
 ├── metrics-server.tf                       # Metrics Server deployment
+├── prometheus.tf                           # Prometheus monitoring stack deployment
 ├── outputs.tf                              # Terraform outputs
 ├── providers.tf                            # Provider configurations
 └── variables.tf                            # Input variables for the module
