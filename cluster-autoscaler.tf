@@ -1,11 +1,10 @@
-#Create the IAM Role for Service Account for cluster autoscaler
 module "cluster_autoscaler_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.59"
 
   role_name                        = "${var.project_name}-cluster-autoscaler-irsa"
   attach_cluster_autoscaler_policy = true
-  cluster_autoscaler_cluster_names = ["${var.project_name}-eks-cluster"]
+  cluster_autoscaler_cluster_names = [module.eks.cluster_name]
 
   oidc_providers = {
     main = {
@@ -15,10 +14,12 @@ module "cluster_autoscaler_irsa" {
   }
 
   tags = {
-    "Environment" = "dev"
-    "Terraform"   = "true"
+    Environment = "dev"
+    Terraform   = "true"
   }
 }
+
+
 
 resource "helm_release" "cluster-autoscaler" {
   name       = "cluster-autoscaler"
@@ -50,15 +51,19 @@ resource "helm_release" "cluster-autoscaler" {
       value = "false"
     },
     {
-      name  = "serviceAccount.create"
+      name  = "rbac.create"
       value = "true"
     },
     {
-      name  = "serviceAccount.name"
+      name  = "rbac.serviceAccount.create"
+      value = "true"
+    },
+    {
+      name  = "rbac.serviceAccount.name"
       value = "cluster-autoscaler"
     },
     {
-      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+      name  = "rbac.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
       value = module.cluster_autoscaler_irsa.iam_role_arn
     }
   ]
