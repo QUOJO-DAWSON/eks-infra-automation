@@ -1,8 +1,8 @@
 module "aws_load_balancer_controller_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.59"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "~> 6.0"
 
-  role_name                              = "${var.project_name}-aws-load-balancer-controller-irsa"
+  name                                   = "${var.project_name}-alb-controller-irsa"
   attach_load_balancer_controller_policy = true
 
   oidc_providers = {
@@ -13,7 +13,7 @@ module "aws_load_balancer_controller_irsa" {
   }
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Terraform   = "true"
   }
 }
@@ -24,7 +24,7 @@ resource "helm_release" "aws-load-balancer-controller" {
   chart      = "aws-load-balancer-controller"
   version    = "1.13.3"
   namespace  = "kube-system"
-  depends_on = [module.eks, module.aws_load_balancer_controller_irsa]
+  depends_on = [module.eks, module.vpc, module.aws_load_balancer_controller_irsa]
 
   wait = true
 
@@ -47,7 +47,7 @@ resource "helm_release" "aws-load-balancer-controller" {
     },
     {
       name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-      value = module.aws_load_balancer_controller_irsa.iam_role_arn
+      value = module.aws_load_balancer_controller_irsa.arn
     }
   ]
 }
