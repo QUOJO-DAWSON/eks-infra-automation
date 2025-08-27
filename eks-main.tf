@@ -9,7 +9,7 @@ data "aws_availability_zones" "azs" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.21"
+  version = "~> 6.0"
 
   name            = "${var.project_name}-vpc"
   cidr            = var.vpc_cidr_block
@@ -24,8 +24,8 @@ module "vpc" {
 
   tags = {
     "kubernetes.io/cluster/${var.project_name}-eks-cluster" = "shared" # Tags required for EKS to discover subnets
-    environment                                             = "development"
-    application                                             = "${var.project_name}"
+    Terraform                                               = "true"
+    Environment                                             = var.environment
   }
 
   public_subnet_tags = {
@@ -42,24 +42,21 @@ module "vpc" {
 #EKS for Cluster
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.37"
+  version = "~> 21.1"
 
-  cluster_name    = "${var.project_name}-eks-cluster"
-  cluster_version = var.cluster_version
+  name               = "${var.project_name}-eks-cluster"
+  kubernetes_version = var.kubernetes_version
 
-  subnet_ids = module.vpc.private_subnets
   vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
 
-  cluster_endpoint_public_access = true
+  endpoint_public_access = true
 
-  # Ensure proper dependency order
-  depends_on = [module.vpc, aws_iam_role.external-admin, aws_iam_role.external-developer]
-
-  cluster_addons = {
+  addons = {
     coredns                = {}
-    eks-pod-identity-agent = {}
+    eks-pod-identity-agent = { before_compute = true }
     kube-proxy             = {}
-    vpc-cni                = {}
+    vpc-cni                = { before_compute = true }
   }
 
   # Set authentication mode to API
@@ -75,7 +72,7 @@ module "eks" {
       username      = "admin"
       type          = "STANDARD"
 
-      # Grant admin access with view-only permissions
+      # Grant admin access with admin access-policy
       policy_associations = {
         viewer = {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -105,11 +102,10 @@ module "eks" {
 
   eks_managed_node_groups = {
     dev = {
-      instance_types = ["t2.large"]
-      min_size       = 2
-      max_size       = 5
-      desired_size   = 3
-
+      instance_types = var.node_group_instance_types
+      min_size       = var.node_group_min_size
+      max_size       = var.node_group_max_size
+      desired_size   = var.node_group_desired_size
       tags = {
         "k8s.io/cluster-autoscaler/enabled"                         = "true"
         "k8s.io/cluster-autoscaler/${var.project_name}-eks-cluster" = "owned"
@@ -141,24 +137,8 @@ module "eks" {
   }
 
   tags = {
-    environment = "development"
-    application = "${var.project_name}"
+    environment = var.environment
+    terraform   = true
   }
-}
 
-#module "eks_blueprints_addons" {
-#  depends_on = [module.eks]
-#  source     = "aws-ia/eks-blueprints-addons/aws"
-#  version    = "~> 1.21"
-#
-#  cluster_name      = module.eks.cluster_name
-#  cluster_endpoint  = module.eks.cluster_endpoint
-#  cluster_version   = module.eks.cluster_version
-#  oidc_provider_arn = module.eks.oidc_provider_arn
-#
-#  enable_aws_load_balancer_controller = false
-#  enable_metrics_server               = false
-#  enable_cluster_autoscaler           = false
-#  enable_external_secrets             = false
-#
-#}
+}
