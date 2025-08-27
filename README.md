@@ -92,6 +92,7 @@ eks-infra-automation/
 └── variables.tf                            # Input variables for the module
 ```
 
+
 ## Deployment
 
 The repository is configured with GitHub Actions workflows for automated deployment. The workflows follow this sequence:
