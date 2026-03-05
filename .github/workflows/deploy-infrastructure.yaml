@@ -28,24 +28,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run tfsec
-        uses: aquasecurity/tfsec-action@v1.0.0
-        with:
-          soft_fail: true
-          format: sarif
-          sarif_file: tfsec.sarif
+      - name: Install tfsec
+        run: |
+          curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+
+      - name: Run tfsec (SARIF output)
+        run: tfsec . --format sarif --out tfsec.sarif --soft-fail
+        continue-on-error: true
+
+      - name: Run tfsec (human-readable summary)
+        run: tfsec . --soft-fail
+        continue-on-error: true
 
       - name: Upload tfsec SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: tfsec.sarif
-
-      - name: tfsec Summary
-        uses: aquasecurity/tfsec-action@v1.0.0
-        with:
-          soft_fail: true
-          format: lovely
 
   # ── Job 2: Validate and Plan ─────────────────────────────────────────────────
   terraform-plan:
