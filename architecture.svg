@@ -1,0 +1,209 @@
+<svg viewBox="0 0 1100 720" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Arial, sans-serif">
+  <!-- Background -->
+  <rect width="1100" height="720" fill="#0f1117"/>
+
+  <!-- Title -->
+  <text x="550" y="38" fill="#e2e8f0" font-size="18" font-weight="700" text-anchor="middle" letter-spacing="1">EKS Infrastructure — Production Architecture</text>
+
+  <!-- ── AWS Cloud boundary ── -->
+  <rect x="20" y="55" width="1060" height="640" rx="12" fill="none" stroke="#f97316" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="40" y="75" fill="#f97316" font-size="11" font-weight="600">AWS Cloud</text>
+
+  <!-- ── VPC boundary ── -->
+  <rect x="40" y="85" width="1020" height="590" rx="10" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="58" y="103" fill="#3b82f6" font-size="11" font-weight="600">VPC  10.0.0.0/16</text>
+
+  <!-- ── Public Subnets ── -->
+  <rect x="60" y="112" width="290" height="190" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+  <text x="205" y="130" fill="#94a3b8" font-size="10" font-weight="600" text-anchor="middle">PUBLIC SUBNETS (3 AZs)</text>
+  <!-- IGW -->
+  <rect x="80" y="140" width="120" height="50" rx="6" fill="#1d4ed8" stroke="#3b82f6" stroke-width="1"/>
+  <text x="140" y="161" fill="#fff" font-size="10" text-anchor="middle" font-weight="600">Internet</text>
+  <text x="140" y="176" fill="#93c5fd" font-size="9" text-anchor="middle">Gateway</text>
+  <!-- ALB -->
+  <rect x="220" y="140" width="120" height="50" rx="6" fill="#1d4ed8" stroke="#3b82f6" stroke-width="1"/>
+  <text x="280" y="161" fill="#fff" font-size="10" text-anchor="middle" font-weight="600">AWS ALB</text>
+  <text x="280" y="176" fill="#93c5fd" font-size="9" text-anchor="middle">Load Balancer Ctrl</text>
+  <!-- NAT -->
+  <rect x="80" y="210" width="120" height="50" rx="6" fill="#1e40af" stroke="#3b82f6" stroke-width="1"/>
+  <text x="140" y="231" fill="#fff" font-size="10" text-anchor="middle" font-weight="600">NAT Gateway</text>
+  <text x="140" y="246" fill="#93c5fd" font-size="9" text-anchor="middle">Outbound egress</text>
+  <!-- Istio GW -->
+  <rect x="220" y="210" width="120" height="50" rx="6" fill="#1e40af" stroke="#3b82f6" stroke-width="1"/>
+  <text x="280" y="231" fill="#fff" font-size="10" text-anchor="middle" font-weight="600">Istio Gateway</text>
+  <text x="280" y="246" fill="#93c5fd" font-size="9" text-anchor="middle">Ingress / TLS term.</text>
+
+  <!-- ── Private Subnets / EKS ── -->
+  <rect x="370" y="112" width="680" height="550" rx="8" fill="#0f172a" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="710" y="130" fill="#a5b4fc" font-size="10" font-weight="700" text-anchor="middle">PRIVATE SUBNETS — EKS CLUSTER (v1.33)</text>
+
+  <!-- Control Plane band -->
+  <rect x="390" y="138" width="640" height="60" rx="6" fill="#1e1b4b" stroke="#6366f1" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="480" y="155" fill="#a5b4fc" font-size="9" font-weight="600">CONTROL PLANE (AWS Managed)</text>
+  <rect x="400" y="160" width="100" height="28" rx="4" fill="#312e81"/>
+  <text x="450" y="178" fill="#c7d2fe" font-size="9" text-anchor="middle">kube-apiserver</text>
+  <rect x="510" y="160" width="100" height="28" rx="4" fill="#312e81"/>
+  <text x="560" y="178" fill="#c7d2fe" font-size="9" text-anchor="middle">etcd</text>
+  <rect x="620" y="160" width="100" height="28" rx="4" fill="#312e81"/>
+  <text x="670" y="178" fill="#c7d2fe" font-size="9" text-anchor="middle">scheduler</text>
+  <rect x="730" y="160" width="100" height="28" rx="4" fill="#312e81"/>
+  <text x="780" y="178" fill="#c7d2fe" font-size="9" text-anchor="middle">ctrl-manager</text>
+  <rect x="840" y="160" width="110" height="28" rx="4" fill="#312e81"/>
+  <text x="895" y="178" fill="#c7d2fe" font-size="9" text-anchor="middle">OIDC Provider</text>
+
+  <!-- ── Service Mesh / Istio ── -->
+  <rect x="390" y="215" width="200" height="115" rx="6" fill="#1a1a2e" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="490" y="232" fill="#c4b5fd" font-size="9" font-weight="700" text-anchor="middle">SERVICE MESH — ISTIO</text>
+  <rect x="400" y="240" width="85" height="36" rx="4" fill="#2d1b69"/>
+  <text x="442" y="255" fill="#ddd6fe" font-size="9" text-anchor="middle" font-weight="600">istiod</text>
+  <text x="442" y="267" fill="#a78bfa" font-size="8" text-anchor="middle">Control Plane</text>
+  <rect x="497" y="240" width="85" height="36" rx="4" fill="#2d1b69"/>
+  <text x="539" y="255" fill="#ddd6fe" font-size="9" text-anchor="middle" font-weight="600">Envoy Proxy</text>
+  <text x="539" y="267" fill="#a78bfa" font-size="8" text-anchor="middle">Sidecar / mTLS</text>
+  <rect x="400" y="285" width="180" height="36" rx="4" fill="#2d1b69"/>
+  <text x="490" y="300" fill="#ddd6fe" font-size="9" text-anchor="middle" font-weight="600">VirtualService / DestinationRule</text>
+  <text x="490" y="312" fill="#a78bfa" font-size="8" text-anchor="middle">Traffic management + circuit breaking</text>
+
+  <!-- ── GitOps / ArgoCD ── -->
+  <rect x="605" y="215" width="200" height="115" rx="6" fill="#1a1a2e" stroke="#10b981" stroke-width="1"/>
+  <text x="705" y="232" fill="#6ee7b7" font-size="9" font-weight="700" text-anchor="middle">GITOPS — ARGOCD</text>
+  <rect x="615" y="240" width="85" height="36" rx="4" fill="#064e3b"/>
+  <text x="657" y="255" fill="#a7f3d0" font-size="9" text-anchor="middle" font-weight="600">ArgoCD Server</text>
+  <text x="657" y="267" fill="#34d399" font-size="8" text-anchor="middle">UI / API / RBAC</text>
+  <rect x="712" y="240" width="85" height="36" rx="4" fill="#064e3b"/>
+  <text x="754" y="255" fill="#a7f3d0" font-size="9" text-anchor="middle" font-weight="600">App Controller</text>
+  <text x="754" y="267" fill="#34d399" font-size="8" text-anchor="middle">Sync + Reconcile</text>
+  <rect x="615" y="285" width="180" height="36" rx="4" fill="#064e3b"/>
+  <text x="705" y="300" fill="#a7f3d0" font-size="9" text-anchor="middle" font-weight="600">ApplicationSet / Apps of Apps</text>
+  <text x="705" y="312" fill="#34d399" font-size="8" text-anchor="middle">cluster-resources + online-boutique</text>
+
+  <!-- ── Observability ── -->
+  <rect x="820" y="215" width="220" height="115" rx="6" fill="#1a1a2e" stroke="#f59e0b" stroke-width="1"/>
+  <text x="930" y="232" fill="#fcd34d" font-size="9" font-weight="700" text-anchor="middle">OBSERVABILITY</text>
+  <rect x="830" y="240" width="90" height="36" rx="4" fill="#451a03"/>
+  <text x="875" y="255" fill="#fde68a" font-size="9" text-anchor="middle" font-weight="600">Prometheus</text>
+  <text x="875" y="267" fill="#fbbf24" font-size="8" text-anchor="middle">Metrics + Alerts</text>
+  <rect x="935" y="240" width="95" height="36" rx="4" fill="#451a03"/>
+  <text x="982" y="255" fill="#fde68a" font-size="9" text-anchor="middle" font-weight="600">Grafana</text>
+  <text x="982" y="267" fill="#fbbf24" font-size="8" text-anchor="middle">Dashboards / UI</text>
+  <rect x="830" y="285" width="200" height="36" rx="4" fill="#451a03"/>
+  <text x="930" y="300" fill="#fde68a" font-size="9" text-anchor="middle" font-weight="600">AlertManager</text>
+  <text x="930" y="312" fill="#fbbf24" font-size="8" text-anchor="middle">Routing + Notifications</text>
+
+  <!-- ── Node Group ── -->
+  <rect x="390" y="345" width="640" height="115" rx="6" fill="#1a1a2e" stroke="#64748b" stroke-width="1"/>
+  <text x="710" y="363" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">MANAGED NODE GROUP  (t3.large · min:1 · max:5 · desired:2)</text>
+  <!-- nodes -->
+  <rect x="400" y="372" width="140" height="78" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="470" y="388" fill="#cbd5e1" font-size="9" text-anchor="middle" font-weight="600">Worker Node 1</text>
+  <text x="470" y="401" fill="#64748b" font-size="8" text-anchor="middle">kubelet · kube-proxy</text>
+  <text x="470" y="414" fill="#64748b" font-size="8" text-anchor="middle">Envoy sidecar</text>
+  <text x="470" y="427" fill="#64748b" font-size="8" text-anchor="middle">containerd runtime</text>
+  <text x="470" y="440" fill="#475569" font-size="8" text-anchor="middle">us-east-1a</text>
+
+  <rect x="560" y="372" width="140" height="78" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="630" y="388" fill="#cbd5e1" font-size="9" text-anchor="middle" font-weight="600">Worker Node 2</text>
+  <text x="630" y="401" fill="#64748b" font-size="8" text-anchor="middle">kubelet · kube-proxy</text>
+  <text x="630" y="414" fill="#64748b" font-size="8" text-anchor="middle">Envoy sidecar</text>
+  <text x="630" y="427" fill="#64748b" font-size="8" text-anchor="middle">containerd runtime</text>
+  <text x="630" y="440" fill="#475569" font-size="8" text-anchor="middle">us-east-1b</text>
+
+  <rect x="720" y="372" width="145" height="78" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="792" y="388" fill="#475569" font-size="9" text-anchor="middle" font-weight="600">Node N (scaled)</text>
+  <text x="792" y="407" fill="#334155" font-size="9" text-anchor="middle">Cluster Autoscaler</text>
+  <text x="792" y="422" fill="#334155" font-size="9" text-anchor="middle">triggers on load</text>
+  <text x="792" y="440" fill="#334155" font-size="8" text-anchor="middle">us-east-1c</text>
+
+  <rect x="880" y="372" width="140" height="78" rx="5" fill="#1a2332" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="950" y="388" fill="#7dd3fc" font-size="9" text-anchor="middle" font-weight="600">IRSA / IAM Roles</text>
+  <text x="950" y="403" fill="#38bdf8" font-size="8" text-anchor="middle">Secrets Manager</text>
+  <text x="950" y="416" fill="#38bdf8" font-size="8" text-anchor="middle">External Secrets Op.</text>
+  <text x="950" y="429" fill="#38bdf8" font-size="8" text-anchor="middle">Admin / Dev Roles</text>
+  <text x="950" y="442" fill="#0369a1" font-size="8" text-anchor="middle">Least-privilege RBAC</text>
+
+  <!-- ── Online Boutique ── -->
+  <rect x="390" y="475" width="640" height="80" rx="6" fill="#1a1a2e" stroke="#ec4899" stroke-width="1"/>
+  <text x="710" y="493" fill="#f9a8d4" font-size="9" font-weight="700" text-anchor="middle">APPLICATION — ONLINE BOUTIQUE (11 Microservices)</text>
+  <rect x="400" y="500" width="75" height="44" rx="4" fill="#500724"/>
+  <text x="437" y="518" fill="#fbcfe8" font-size="8" text-anchor="middle">frontend</text>
+  <text x="437" y="530" fill="#9d174d" font-size="7" text-anchor="middle">Go</text>
+  <rect x="483" y="500" width="75" height="44" rx="4" fill="#500724"/>
+  <text x="520" y="518" fill="#fbcfe8" font-size="8" text-anchor="middle">cart</text>
+  <text x="520" y="530" fill="#9d174d" font-size="7" text-anchor="middle">C#</text>
+  <rect x="566" y="500" width="75" height="44" rx="4" fill="#500724"/>
+  <text x="603" y="518" fill="#fbcfe8" font-size="8" text-anchor="middle">checkout</text>
+  <text x="603" y="530" fill="#9d174d" font-size="7" text-anchor="middle">Go</text>
+  <rect x="649" y="500" width="75" height="44" rx="4" fill="#500724"/>
+  <text x="686" y="518" fill="#fbcfe8" font-size="8" text-anchor="middle">payment</text>
+  <text x="686" y="530" fill="#9d174d" font-size="7" text-anchor="middle">Node.js</text>
+  <rect x="732" y="500" width="75" height="44" rx="4" fill="#500724"/>
+  <text x="769" y="518" fill="#fbcfe8" font-size="8" text-anchor="middle">product-cat</text>
+  <text x="769" y="530" fill="#9d174d" font-size="7" text-anchor="middle">Python</text>
+  <rect x="815" y="500" width="75" height="44" rx="4" fill="#500724"/>
+  <text x="852" y="518" fill="#fbcfe8" font-size="8" text-anchor="middle">recommend</text>
+  <text x="852" y="530" fill="#9d174d" font-size="7" text-anchor="middle">Python</text>
+  <rect x="898" y="500" width="120" height="44" rx="4" fill="#500724"/>
+  <text x="958" y="516" fill="#fbcfe8" font-size="8" text-anchor="middle">+ 5 more services</text>
+  <text x="958" y="529" fill="#9d174d" font-size="7" text-anchor="middle">shipping · email · ad · currency · redis</text>
+
+  <!-- ── CI/CD strip at bottom ── -->
+  <rect x="390" y="565" width="640" height="60" rx="6" fill="#1a1a2e" stroke="#06b6d4" stroke-width="1"/>
+  <text x="710" y="582" fill="#67e8f9" font-size="9" font-weight="700" text-anchor="middle">CI/CD — GITHUB ACTIONS</text>
+  <rect x="400" y="590" width="115" height="28" rx="4" fill="#083344"/>
+  <text x="457" y="608" fill="#a5f3fc" font-size="8" text-anchor="middle">bootstrap-backend</text>
+  <rect x="525" y="590" width="145" height="28" rx="4" fill="#083344"/>
+  <text x="597" y="608" fill="#a5f3fc" font-size="8" text-anchor="middle">deploy-infrastructure</text>
+  <rect x="680" y="590" width="145" height="28" rx="4" fill="#083344"/>
+  <text x="752" y="608" fill="#a5f3fc" font-size="8" text-anchor="middle">destroy-infrastructure</text>
+  <rect x="835" y="590" width="185" height="28" rx="4" fill="#083344"/>
+  <text x="927" y="604" fill="#a5f3fc" font-size="8" text-anchor="middle">OIDC · No stored creds</text>
+  <text x="927" y="614" fill="#0e7490" font-size="7" text-anchor="middle">AWS IRSA via AssumeRoleWithWebIdentity</text>
+
+  <!-- ── External actors (left side) ── -->
+  <rect x="25" y="310" width="120" height="50" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="1"/>
+  <text x="85" y="331" fill="#e2e8f0" font-size="10" text-anchor="middle" font-weight="600">Developer</text>
+  <text x="85" y="346" fill="#64748b" font-size="8" text-anchor="middle">git push / PR</text>
+
+  <rect x="25" y="380" width="120" height="50" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="1"/>
+  <text x="85" y="401" fill="#e2e8f0" font-size="10" text-anchor="middle" font-weight="600">End User</text>
+  <text x="85" y="416" fill="#64748b" font-size="8" text-anchor="middle">HTTPS traffic</text>
+
+  <rect x="25" y="450" width="120" height="50" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="1"/>
+  <text x="85" y="471" fill="#e2e8f0" font-size="10" text-anchor="middle" font-weight="600">GitOps Repo</text>
+  <text x="85" y="486" fill="#64748b" font-size="8" text-anchor="middle">ArgoCD watches</text>
+
+  <rect x="25" y="520" width="120" height="50" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="1"/>
+  <text x="85" y="541" fill="#e2e8f0" font-size="10" text-anchor="middle" font-weight="600">AWS Secrets</text>
+  <text x="85" y="556" fill="#64748b" font-size="8" text-anchor="middle">Manager</text>
+
+  <!-- Arrows -->
+  <!-- Developer → GitHub Actions -->
+  <line x1="145" y1="335" x2="370" y2="590" stroke="#06b6d4" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrow-cyan)"/>
+  <!-- End user → ALB -->
+  <line x1="145" y1="405" x2="220" y2="215" stroke="#3b82f6" stroke-width="1.2" marker-end="url(#arrow-blue)"/>
+  <!-- GitOps → ArgoCD -->
+  <line x1="145" y1="475" x2="605" y2="300" stroke="#10b981" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrow-green)"/>
+  <!-- Secrets Manager → External Secrets -->
+  <line x1="145" y1="545" x2="880" y2="430" stroke="#7dd3fc" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrow-sky)"/>
+  <!-- ALB → Istio GW -->
+  <line x1="280" y1="260" x2="390" y2="255" stroke="#8b5cf6" stroke-width="1.2" marker-end="url(#arrow-purple)"/>
+
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrow-cyan" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#06b6d4"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#10b981"/>
+    </marker>
+    <marker id="arrow-sky" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#7dd3fc"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#8b5cf6"/>
+    </marker>
+  </defs>
+</svg>
