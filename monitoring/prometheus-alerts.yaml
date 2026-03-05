@@ -1,0 +1,205 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: eks-platform-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+
+    - name: node.health
+      rules:
+        - alert: NodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{ $labels.node }} is not Ready"
+            description: >
+              Node {{ $labels.node }} has been in NotReady state for more than 5 minutes.
+            runbook_url: "https://github.com/QUOJO-DAWSON/eks-infra-automation/blob/main/docs/runbooks/terraform-operations.md"
+
+        - alert: NodeMemoryPressure
+          expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.node }} under memory pressure"
+            description: >
+              Node {{ $labels.node }} is reporting MemoryPressure. The kubelet may begin evicting pods.
+
+        - alert: NodeDiskPressure
+          expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.node }} under disk pressure"
+            description: >
+              Node {{ $labels.node }} is reporting DiskPressure. Clear unused images or increase node storage.
+
+        - alert: NodeHighCPUUtilization
+          expr: |
+            (1 - avg by(node) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU utilization on node {{ $labels.node }}"
+            description: >
+              CPU utilization on {{ $labels.node }} has exceeded 85% for 10 minutes.
+              Current value: {{ $value | printf "%.1f" }}%.
+
+    - name: workload.health
+      rules:
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total[15m]) * 60 * 15 > 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+            description: >
+              Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted more than 3 times in 15 minutes.
+
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{condition="true"} == 0
+            unless on(pod, namespace) kube_pod_status_phase{phase=~"Succeeded|Failed"} == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} not ready"
+            description: >
+              Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been non-ready for 10 minutes.
+
+        - alert: DeploymentReplicasMismatch
+          expr: kube_deployment_spec_replicas != kube_deployment_status_available_replicas
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has mismatched replicas"
+            description: >
+              Deployment {{ $labels.deployment }} has {{ $value }} available replicas but spec requires a different count.
+
+        - alert: HorizontalPodAutoscalerMaxedOut
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas
+              == kube_horizontalpodautoscaler_spec_max_replicas
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler }} at max replicas"
+            description: >
+              HPA has been at maximum replica count for 15 minutes. Consider increasing max replicas.
+
+    - name: istio.slo
+      rules:
+        - alert: IstioHighRequestErrorRate
+          expr: |
+            (
+              sum by(destination_service_name, destination_service_namespace) (
+                rate(istio_requests_total{response_code=~"5.."}[5m])
+              )
+              /
+              sum by(destination_service_name, destination_service_namespace) (
+                rate(istio_requests_total[5m])
+              )
+            ) * 100 > 5
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High error rate on {{ $labels.destination_service_name }}"
+            description: >
+              Service {{ $labels.destination_service_name }} has a 5xx error rate of {{ $value | printf "%.2f" }}% above 5% SLO.
+            runbook_url: "https://github.com/QUOJO-DAWSON/eks-infra-automation/blob/main/docs/runbooks/istio-troubleshooting.md"
+
+        - alert: IstioHighRequestLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum by(destination_service_name, destination_service_namespace, le) (
+                rate(istio_request_duration_milliseconds_bucket[5m])
+              )
+            ) > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High p99 latency on {{ $labels.destination_service_name }}"
+            description: >
+              Service {{ $labels.destination_service_name }} p99 latency is {{ $value | printf "%.0f" }}ms above 1000ms SLO.
+
+        - alert: IstioServiceUnavailable
+          expr: absent(istio_requests_total{destination_service_name="frontend"}) == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Istio frontend service receiving no traffic"
+            description: >
+              No requests observed for the frontend service in 2 minutes. Service may be down.
+
+    - name: argocd.sync
+      rules:
+        - alert: ArgoCDAppOutOfSync
+          expr: argocd_app_info{sync_status="OutOfSync"} == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "ArgoCD app {{ $labels.name }} is OutOfSync"
+            description: >
+              ArgoCD application {{ $labels.name }} has been OutOfSync for more than 10 minutes.
+
+        - alert: ArgoCDAppDegraded
+          expr: argocd_app_info{health_status="Degraded"} == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "ArgoCD app {{ $labels.name }} is Degraded"
+            description: >
+              ArgoCD application {{ $labels.name }} health is Degraded. Check the ArgoCD UI.
+
+        - alert: ArgoCDSyncFailed
+          expr: argocd_app_info{operation_state_phase="Failed"} == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "ArgoCD sync failed for app {{ $labels.name }}"
+            description: >
+              The last sync operation for ArgoCD application {{ $labels.name }} failed.
+
+    - name: autoscaler.health
+      rules:
+        - alert: ClusterAutoscalerUnschedulablePods
+          expr: cluster_autoscaler_unschedulable_pods_count > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value }} pods cannot be scheduled"
+            description: >
+              {{ $value }} pods have been unschedulable for 5 minutes. Autoscaler should be adding nodes.
+
+        - alert: ClusterAutoscalerNotActive
+          expr: |
+            time() - cluster_autoscaler_last_activity{activity="scaleUp"} > 3600
+              and cluster_autoscaler_unschedulable_pods_count > 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Cluster Autoscaler has not scaled up despite pending pods"
+            description: >
+              Unschedulable pods exist but Cluster Autoscaler has not attempted a scale-up in 1 hour.
