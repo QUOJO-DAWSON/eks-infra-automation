@@ -40,11 +40,7 @@ jobs:
         run: tfsec . --soft-fail
         continue-on-error: true
 
-      - name: Upload tfsec SARIF results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: tfsec.sarif
+      # SARIF upload skipped  tfsec git:// URI scheme incompatible with GitHub code scanning file:// requirement
 
   # ── Job 2: Validate and Plan ─────────────────────────────────────────────────
   terraform-plan:
