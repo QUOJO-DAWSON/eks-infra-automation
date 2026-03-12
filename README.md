@@ -1,6 +1,6 @@
-# EKS Infrastructure Automation
+﻿# EKS Infrastructure Automation
 
-> **Production-grade EKS platform** — Terraform-automated Kubernetes cluster with Istio service mesh, ArgoCD GitOps delivery, Prometheus/Grafana observability, and GitHub Actions CI/CD. Deploys a full 11-service microservices workload ([Online Boutique](https://github.com/QUOJO-DAWSON/online-boutique-application)) in a reproducible, zero-manual-steps workflow.
+> **Production-grade EKS platform** â€” Terraform-automated Kubernetes cluster with Istio service mesh, ArgoCD GitOps delivery, Prometheus/Grafana observability, and GitHub Actions CI/CD. Deploys a full 11-service microservices workload ([Online Boutique](https://github.com/QUOJO-DAWSON/online-boutique-application)) in a reproducible, zero-manual-steps workflow.
 
 [![Terraform](https://img.shields.io/badge/Terraform-v1.12%2B-7B42BC?logo=terraform)](https://www.terraform.io/)
 [![Kubernetes](https://img.shields.io/badge/EKS-v1.33-326CE5?logo=kubernetes)](https://kubernetes.io/)
@@ -14,7 +14,7 @@
 
 Managing Kubernetes at scale requires more than a working cluster. Teams need **consistent, auditable deployments** (GitOps), **zero-trust networking** between services (service mesh), **early visibility into regressions** (observability), and **secrets that never touch Git** (external secrets management). Assembling these primitives from scratch on each project wastes engineering time and introduces inconsistency.
 
-This repository delivers a **turn-key, opinionated EKS platform** that wires all four concerns together through Terraform, allowing teams to focus on application delivery rather than infrastructure plumbing. It targets the pattern used by platform engineering teams at mid-to-large companies — where a single IaC repository stands up the full cluster and its operational tooling reproducibly.
+This repository delivers a **turn-key, opinionated EKS platform** that wires all four concerns together through Terraform, allowing teams to focus on application delivery rather than infrastructure plumbing. It targets the pattern used by platform engineering teams at mid-to-large companies â€” where a single IaC repository stands up the full cluster and its operational tooling reproducibly.
 
 ---
 
@@ -24,9 +24,9 @@ This repository delivers a **turn-key, opinionated EKS platform** that wires all
 |--------|-------|
 | **Cluster provisioning time** | ~12 minutes (cold, from `terraform apply`) |
 | **Full workload deployment** | ~3 minutes post-cluster (ArgoCD initial sync) |
-| **Zero-downtime deployments** | ✅ via ArgoCD rolling sync + Istio traffic shifting |
-| **Secrets in Git** | 0 — all secrets managed via AWS Secrets Manager + ESO |
-| **Manual kubectl steps** | 0 — full GitOps; cluster state is 100% declarative |
+| **Zero-downtime deployments** | âœ… via ArgoCD rolling sync + Istio traffic shifting |
+| **Secrets in Git** | 0 â€” all secrets managed via AWS Secrets Manager + ESO |
+| **Manual kubectl steps** | 0 â€” full GitOps; cluster state is 100% declarative |
 | **Inter-service encryption** | 100% mTLS via Istio (zero application code changes) |
 | **Terraform resources managed** | ~80 across 11 `.tf` files |
 
@@ -39,22 +39,22 @@ This repository delivers a **turn-key, opinionated EKS platform** that wires all
 ### System Overview
 
 ```
-Internet → ALB → Istio Gateway → Istio VirtualService → Microservices (mTLS)
-                                         ↑
-GitHub Actions ──── Terraform ──── EKS Cluster
-                                         ↑
-GitOps Repo ──── ArgoCD ──────── Workloads + Add-ons
-                                         ↑
-AWS Secrets Manager ──── ESO ──── Kubernetes Secrets
+Internet â†’ ALB â†’ Istio Gateway â†’ Istio VirtualService â†’ Microservices (mTLS)
+                                         â†‘
+GitHub Actions â”€â”€â”€â”€ Terraform â”€â”€â”€â”€ EKS Cluster
+                                         â†‘
+GitOps Repo â”€â”€â”€â”€ ArgoCD â”€â”€â”€â”€â”€â”€â”€â”€ Workloads + Add-ons
+                                         â†‘
+AWS Secrets Manager â”€â”€â”€â”€ ESO â”€â”€â”€â”€ Kubernetes Secrets
 ```
 
 The cluster is structured in three logical layers:
 
-**Platform layer** — deployed by Terraform: VPC, EKS, IAM roles, Istio, ArgoCD, External Secrets Operator, Prometheus stack, Cluster Autoscaler, Metrics Server, AWS Load Balancer Controller.
+**Platform layer** â€” deployed by Terraform: VPC, EKS, IAM roles, Istio, ArgoCD, External Secrets Operator, Prometheus stack, Cluster Autoscaler, Metrics Server, AWS Load Balancer Controller.
 
-**GitOps layer** — managed by ArgoCD: cluster resources (namespaces, RBAC, network policies) and the Online Boutique application, sourced from the [GitOps repo](https://github.com/QUOJO-DAWSON/online-boutique-gitops).
+**GitOps layer** â€” managed by ArgoCD: cluster resources (namespaces, RBAC, network policies) and the Online Boutique application, sourced from the [GitOps repo](https://github.com/QUOJO-DAWSON/online-boutique-gitops).
 
-**Application layer** — the Online Boutique: 11 polyglot microservices (Go, Python, Node.js, C#) communicating exclusively over mTLS within the Istio mesh.
+**Application layer** â€” the Online Boutique: 11 polyglot microservices (Go, Python, Node.js, C#) communicating exclusively over mTLS within the Istio mesh.
 
 ---
 
@@ -72,38 +72,38 @@ The cluster is structured in three logical layers:
 
 ```
 eks-infra-automation/
-├── .github/workflows/
-│   ├── bootstrap-backend.yaml        # S3 bucket + native state locking
-│   ├── deploy-infrastructure.yaml    # Plan on PR, apply on merge to main
-│   └── destroy-infrastructure.yaml   # Manual teardown
-├── argocd-apps/
-│   ├── cluster-resources-argo-app.yaml
-│   └── online-boutique-argo-app.yaml
-├── backend/
-│   ├── main.tf                       # S3 backend configuration
-│   └── outputs.tf
-├── docs/
-│   ├── adr/                          # Architecture Decision Records
-│   │   ├── 001-istio-service-mesh.md
-│   │   ├── 002-argocd-gitops.md
-│   │   └── 003-external-secrets-operator.md
-│   └── img/
-│       └── architecture.svg
-├── argocd.tf
-├── aws-load-balancer-controller.tf
-├── cluster-autoscaler.tf
-├── eks-main.tf                       # EKS cluster + VPC
-├── external-secrets.tf
-├── iam-roles.tf
-├── istio.tf
-├── istio-gateway-values.yaml
-├── kube-resources.tf
-├── metrics-server.tf
-├── prometheus.tf
-├── outputs.tf
-├── providers.tf
-├── terraform.tfvars
-└── variables.tf
+â”œâ”€â”€ .github/workflows/
+â”‚   â”œâ”€â”€ bootstrap-backend.yaml        # S3 bucket + native state locking
+â”‚   â”œâ”€â”€ deploy-infrastructure.yaml    # Plan on PR, apply on merge to main
+â”‚   â””â”€â”€ destroy-infrastructure.yaml   # Manual teardown
+â”œâ”€â”€ argocd-apps/
+â”‚   â”œâ”€â”€ cluster-resources-argo-app.yaml
+â”‚   â””â”€â”€ online-boutique-argo-app.yaml
+â”œâ”€â”€ backend/
+â”‚   â”œâ”€â”€ main.tf                       # S3 backend configuration
+â”‚   â””â”€â”€ outputs.tf
+â”œâ”€â”€ docs/
+â”‚   â”œâ”€â”€ adr/                          # Architecture Decision Records
+â”‚   â”‚   â”œâ”€â”€ 001-istio-service-mesh.md
+â”‚   â”‚   â”œâ”€â”€ 002-argocd-gitops.md
+â”‚   â”‚   â””â”€â”€ 003-external-secrets-operator.md
+â”‚   â””â”€â”€ img/
+â”‚       â””â”€â”€ architecture.svg
+â”œâ”€â”€ argocd.tf
+â”œâ”€â”€ aws-load-balancer-controller.tf
+â”œâ”€â”€ cluster-autoscaler.tf
+â”œâ”€â”€ eks-main.tf                       # EKS cluster + VPC
+â”œâ”€â”€ external-secrets.tf
+â”œâ”€â”€ iam-roles.tf
+â”œâ”€â”€ istio.tf
+â”œâ”€â”€ istio-gateway-values.yaml
+â”œâ”€â”€ kube-resources.tf
+â”œâ”€â”€ metrics-server.tf
+â”œâ”€â”€ prometheus.tf
+â”œâ”€â”€ outputs.tf
+â”œâ”€â”€ providers.tf
+â”œâ”€â”€ terraform.tfvars
+â””â”€â”€ variables.tf
 ```
 
 ---
@@ -154,23 +154,23 @@ eks-infra-automation/
 
 The repository ships three GitHub Actions workflows that run in sequence:
 
-### Step 1 — Bootstrap the Terraform Backend
+### Step 1 â€” Bootstrap the Terraform Backend
 
 Run the **Bootstrap Backend** workflow (`workflow_dispatch`) once per AWS account. This creates the S3 bucket with native state locking used by all subsequent Terraform operations.
 
-### Step 2 — Deploy Infrastructure
+### Step 2 â€” Deploy Infrastructure
 
 Push to `main` (or open a PR) to trigger the **Deploy Infrastructure** workflow:
-- **Pull Request** → `terraform validate` + `terraform plan` (no apply)
-- **Push to `main`** → `terraform apply` (full deployment)
+- **Pull Request** â†’ `terraform validate` + `terraform plan` (no apply)
+- **Push to `main`** â†’ `terraform apply` (full deployment)
 
-### Step 3 — Destroy Infrastructure
+### Step 3 â€” Destroy Infrastructure
 
 Run the **Destroy Infrastructure** workflow (`workflow_dispatch`) to tear everything down cleanly.
 
 ---
 
-### GitHub Actions — Required Secrets
+### GitHub Actions â€” Required Secrets
 
 | Secret | Description | Required |
 |--------|-------------|----------|
@@ -181,7 +181,7 @@ Run the **Destroy Infrastructure** workflow (`workflow_dispatch`) to tear everyt
 | `GITOPS_USERNAME` | Git username for ArgoCD | If private repo |
 | `GITOPS_PASSWORD` | Git token for ArgoCD | If private repo |
 
-### GitHub Actions — Required Variables
+### GitHub Actions â€” Required Variables
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -250,7 +250,7 @@ aws eks update-kubeconfig --region <REGION> --name <CLUSTER_NAME>
 
 | Repository | Purpose |
 |------------|---------|
-| [eks-infra-automation](https://github.com/QUOJO-DAWSON/eks-infra-automation) | This repo — cluster infrastructure |
+| [eks-infra-automation](https://github.com/QUOJO-DAWSON/eks-infra-automation) | This repo â€” cluster infrastructure |
 | [online-boutique-application](https://github.com/QUOJO-DAWSON/online-boutique-application) | Microservices source code + CI pipeline |
 | [online-boutique-gitops](https://github.com/QUOJO-DAWSON/online-boutique-gitops) | Kubernetes manifests watched by ArgoCD |
 
@@ -261,7 +261,7 @@ aws eks update-kubeconfig --region <REGION> --name <CLUSTER_NAME>
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Commit your changes: `git commit -m 'feat: description'`
-4. Push and open a Pull Request — CI will run `terraform validate` and `terraform plan`
+4. Push and open a Pull Request â€” CI will run `terraform validate` and `terraform plan`
 
 ---
 
