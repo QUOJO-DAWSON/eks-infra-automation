@@ -158,3 +158,10 @@ variable "user_for_dev_role" {
 #  type        = string
 #  sensitive   = true
 #}
+
+variable "slack_webhook_url" {
+  description = "Slack incoming webhook URL for AlertManager notifications"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
