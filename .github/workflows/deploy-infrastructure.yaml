@@ -1,4 +1,4 @@
-name: Deploy Infrastructure
+﻿name: Deploy Infrastructure
 
 on:
   push:
@@ -19,7 +19,7 @@ permissions:
   security-events: write
 
 jobs:
-  # ── Job 1: Security Scan ─────────────────────────────────────────────────────
+  # ── Job 1: tfsec ────────────────────────────────────────────────────────────
   tfsec:
     name: Security Scan (tfsec)
     runs-on: ubuntu-latest
@@ -40,13 +40,40 @@ jobs:
         run: tfsec . --soft-fail
         continue-on-error: true
 
-      # SARIF upload skipped  tfsec git:// URI scheme incompatible with GitHub code scanning file:// requirement
+  # ── Job 2: Trivy ─────────────────────────────────────────────────────────────
+  trivy:
+    name: Security Scan (Trivy)
+    runs-on: ubuntu-latest
 
-  # ── Job 2: Validate and Plan ─────────────────────────────────────────────────
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy IaC misconfiguration scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
+          trivyignores: .trivyignore
+
+      - name: Run Trivy secret scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+
+  # ── Job 3: Validate and Plan ─────────────────────────────────────────────────
   terraform-plan:
     name: Validate and Plan Infrastructure
     runs-on: ubuntu-latest
-    needs: tfsec
+    needs: [tfsec, trivy]
     outputs:
       plan-outcome: ${{ steps.plan.outcome }}
 
@@ -143,7 +170,6 @@ jobs:
               `> Triggered by @${{ github.actor }} via \`${{ github.event_name }}\``
             ].join('\n');
 
-            // Delete previous bot comments to avoid spam
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -170,7 +196,7 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
-  # ── Job 3: Apply (main branch only) ─────────────────────────────────────────
+  # ── Job 4: Apply (main branch only) ─────────────────────────────────────────
   apply:
     name: Apply Infrastructure
     runs-on: ubuntu-latest
@@ -221,9 +247,3 @@ jobs:
           aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ vars.AWS_REGION }}
           kubectl get nodes
           kubectl get pods --all-namespaces
-
-      - name: Apply ArgoCD Applications
-        if: env.CLUSTER_NAME != ''
-        run: |
-          kubectl apply -f argocd-apps/online-boutique-argo-app.yaml
-          kubectl apply -f argocd-apps/cluster-resources-argo-app.yaml
