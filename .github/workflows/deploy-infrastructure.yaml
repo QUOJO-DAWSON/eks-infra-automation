@@ -19,7 +19,9 @@ permissions:
   security-events: write
 
 jobs:
-  # ── Job 1: tfsec ────────────────────────────────────────────────────────────
+  # --------------------------------------------------------------------------
+  # Job 1: tfsec
+  # --------------------------------------------------------------------------
   tfsec:
     name: Security Scan (tfsec)
     runs-on: ubuntu-latest
@@ -40,7 +42,9 @@ jobs:
         run: tfsec . --soft-fail
         continue-on-error: true
 
-  # ── Job 2: Trivy ─────────────────────────────────────────────────────────────
+  # --------------------------------------------------------------------------
+  # Job 2: Trivy
+  # --------------------------------------------------------------------------
   trivy:
     name: Security Scan (Trivy)
     runs-on: ubuntu-latest
@@ -69,7 +73,9 @@ jobs:
           exit-code: 1
           severity: CRITICAL,HIGH
 
-  # ── Job 3: Validate and Plan ─────────────────────────────────────────────────
+  # --------------------------------------------------------------------------
+  # Job 3: Validate and Plan
+  # --------------------------------------------------------------------------
   terraform-plan:
     name: Validate and Plan Infrastructure
     runs-on: ubuntu-latest
@@ -196,7 +202,9 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
-  # ── Job 4: Apply (main branch only) ─────────────────────────────────────────
+  # --------------------------------------------------------------------------
+  # Job 4: Apply (main branch only)
+  # --------------------------------------------------------------------------
   apply:
     name: Apply Infrastructure
     runs-on: ubuntu-latest
