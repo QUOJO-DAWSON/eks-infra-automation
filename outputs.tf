@@ -1,5 +1,4 @@
-# ── Cluster ───────────────────────────────────────────────────────────────────
-
+﻿# -- Cluster ------------------------------------------------------------------
 output "cluster_name" {
   description = "Name of the EKS cluster. Used by CI/CD to configure kubectl and by monitoring for cluster identification."
   value       = module.eks.cluster_name
@@ -21,31 +20,29 @@ output "cluster_certificate_authority_data" {
   sensitive   = true
 }
 
-# ── Networking ────────────────────────────────────────────────────────────────
-
+# -- Networking ---------------------------------------------------------------
 output "vpc_id" {
   description = "ID of the VPC hosting the EKS cluster."
-  value       = module.eks.vpc_id
+  value       = module.vpc.vpc_id
 }
 
 output "private_subnet_ids" {
   description = "IDs of the private subnets where EKS worker nodes are provisioned."
-  value       = module.eks.private_subnets
+  value       = module.vpc.private_subnets
 }
 
 output "public_subnet_ids" {
   description = "IDs of the public subnets hosting the NAT Gateways and ALB."
-  value       = module.eks.public_subnets
+  value       = module.vpc.public_subnets
 }
 
-# ── Access ────────────────────────────────────────────────────────────────────
-
+# -- Access -------------------------------------------------------------------
 output "configure_kubectl" {
   description = "Run this command to configure kubectl access to the cluster after assuming the admin IAM role."
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
 }
 
 output "node_group_role_arn" {
-  description = "IAM role ARN assigned to the EKS managed node group."
-  value       = module.eks.eks_managed_node_groups["eks_nodes"].iam_role_arn
+  description = "ARN of the IAM role attached to the EKS managed node group."
+  value       = module.eks.eks_managed_node_groups["dev"].iam_role_arn
 }
