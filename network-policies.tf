@@ -1,5 +1,5 @@
 ﻿resource "kubernetes_manifest" "netpol_default_deny" {
-  depends_on = [kubernetes_namespace.online-boutique]
+  depends_on = [kubernetes_namespace_v1.online-boutique]
 
   manifest = {
     apiVersion = "networking.k8s.io/v1"
