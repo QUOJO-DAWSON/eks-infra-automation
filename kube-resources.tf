@@ -1,4 +1,4 @@
-provider "kubernetes" {
+﻿provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
 
@@ -9,7 +9,7 @@ provider "kubernetes" {
   }
 }
 
-resource "kubernetes_namespace" "online-boutique" {
+resource "kubernetes_namespace_v1" "online-boutique" {
   depends_on = [module.eks]
   metadata {
     name = "online-boutique"
