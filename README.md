@@ -1,20 +1,21 @@
 ﻿# EKS Infrastructure Automation
 
-> **Production-grade EKS platform** â€” Terraform-automated Kubernetes cluster with Istio service mesh, ArgoCD GitOps delivery, Prometheus/Grafana observability, and GitHub Actions CI/CD. Deploys a full 11-service microservices workload ([Online Boutique](https://github.com/QUOJO-DAWSON/online-boutique-application)) in a reproducible, zero-manual-steps workflow.
+> **Production-grade EKS platform** -- Terraform-automated Kubernetes cluster with Istio service mesh, ArgoCD GitOps delivery, Kyverno policy-as-code, Prometheus/Grafana/AlertManager observability, and GitHub Actions CI/CD with tfsec and Trivy security scanning. Deploys a full 11-service microservices workload ([Online Boutique](https://github.com/QUOJO-DAWSON/online-boutique-application)) across dev, staging, and prod environments in a reproducible, zero-manual-steps workflow.
 
 [![Terraform](https://img.shields.io/badge/Terraform-v1.12%2B-7B42BC?logo=terraform)](https://www.terraform.io/)
 [![Kubernetes](https://img.shields.io/badge/EKS-v1.33-326CE5?logo=kubernetes)](https://kubernetes.io/)
 [![Istio](https://img.shields.io/badge/Istio-Service%20Mesh-466BB0?logo=istio)](https://istio.io/)
 [![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?logo=argo)](https://argoproj.github.io/cd/)
+[![Kyverno](https://img.shields.io/badge/Kyverno-Policy--as--Code-00A9E0)](https://kyverno.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
 ## Problem Statement
 
-Managing Kubernetes at scale requires more than a working cluster. Teams need **consistent, auditable deployments** (GitOps), **zero-trust networking** between services (service mesh), **early visibility into regressions** (observability), and **secrets that never touch Git** (external secrets management). Assembling these primitives from scratch on each project wastes engineering time and introduces inconsistency.
+Managing Kubernetes at scale requires more than a working cluster. Teams need **consistent, auditable deployments** (GitOps), **zero-trust networking** between services (service mesh), **early visibility into regressions** (observability), **secrets that never touch Git** (external secrets management), and **policy guardrails that enforce security standards at admission time** (policy-as-code).
 
-This repository delivers a **turn-key, opinionated EKS platform** that wires all four concerns together through Terraform, allowing teams to focus on application delivery rather than infrastructure plumbing. It targets the pattern used by platform engineering teams at mid-to-large companies â€” where a single IaC repository stands up the full cluster and its operational tooling reproducibly.
+This repository delivers a **turn-key, opinionated EKS platform** that wires all five concerns together through Terraform, allowing teams to focus on application delivery rather than infrastructure plumbing. It targets the pattern used by platform engineering teams at mid-to-large companies -- where a single IaC repository stands up the full cluster and its operational tooling reproducibly.
 
 ---
 
@@ -22,13 +23,15 @@ This repository delivers a **turn-key, opinionated EKS platform** that wires all
 
 | Metric | Value |
 |--------|-------|
-| **Cluster provisioning time** | ~12 minutes (cold, from `terraform apply`) |
-| **Full workload deployment** | ~3 minutes post-cluster (ArgoCD initial sync) |
-| **Zero-downtime deployments** | âœ… via ArgoCD rolling sync + Istio traffic shifting |
-| **Secrets in Git** | 0 â€” all secrets managed via AWS Secrets Manager + ESO |
-| **Manual kubectl steps** | 0 â€” full GitOps; cluster state is 100% declarative |
-| **Inter-service encryption** | 100% mTLS via Istio (zero application code changes) |
-| **Terraform resources managed** | ~80 across 11 `.tf` files |
+| Cluster provisioning time | ~12 minutes (cold, from `terraform apply`) |
+| Full workload deployment | ~3 minutes post-cluster (ArgoCD initial sync) |
+| Zero-downtime deployments | Yes -- ArgoCD rolling sync + Istio traffic shifting |
+| Secrets in Git | 0 -- all secrets via AWS Secrets Manager + ESO |
+| Manual kubectl steps | 0 -- full GitOps, cluster state is 100% declarative |
+| Inter-service encryption | 100% mTLS via Istio (zero application code changes) |
+| Terraform resources managed | ~90 across 14 `.tf` files |
+| Kyverno policies enforced | 5 ClusterPolicies (privileged, root, host namespaces, latest tag, resource limits) |
+| Environments | 3 -- dev, staging, prod via Kustomize overlays |
 
 ---
 
@@ -37,24 +40,25 @@ This repository delivers a **turn-key, opinionated EKS platform** that wires all
 ![Architecture Diagram](docs/img/architecture.svg)
 
 ### System Overview
-
 ```
-Internet â†’ ALB â†’ Istio Gateway â†’ Istio VirtualService â†’ Microservices (mTLS)
-                                         â†‘
-GitHub Actions â”€â”€â”€â”€ Terraform â”€â”€â”€â”€ EKS Cluster
-                                         â†‘
-GitOps Repo â”€â”€â”€â”€ ArgoCD â”€â”€â”€â”€â”€â”€â”€â”€ Workloads + Add-ons
-                                         â†‘
-AWS Secrets Manager â”€â”€â”€â”€ ESO â”€â”€â”€â”€ Kubernetes Secrets
+Internet -> ALB -> Istio Gateway -> VirtualService -> Microservices (mTLS)
+                                          |
+GitHub Actions ---- Terraform ---- EKS Cluster
+                                          |
+GitOps Repo ---- ArgoCD --------- Workloads + Add-ons
+                                          |
+AWS Secrets Manager ---- ESO ---- Kubernetes Secrets
+                                          |
+Kyverno ---- Admission Webhook ---- Policy Enforcement
 ```
 
 The cluster is structured in three logical layers:
 
-**Platform layer** â€” deployed by Terraform: VPC, EKS, IAM roles, Istio, ArgoCD, External Secrets Operator, Prometheus stack, Cluster Autoscaler, Metrics Server, AWS Load Balancer Controller.
+**Platform layer** -- deployed by Terraform: VPC, EKS, IAM roles, Istio, ArgoCD, External Secrets Operator, Prometheus stack, Kyverno admission controller, Cluster Autoscaler, Metrics Server, AWS Load Balancer Controller, NetworkPolicies, PodDisruptionBudgets.
 
-**GitOps layer** â€” managed by ArgoCD: cluster resources (namespaces, RBAC, network policies) and the Online Boutique application, sourced from the [GitOps repo](https://github.com/QUOJO-DAWSON/online-boutique-gitops).
+**GitOps layer** -- managed by ArgoCD: cluster resources (namespaces, RBAC) and the Online Boutique application across dev, staging, and prod environments, sourced from the [GitOps repo](https://github.com/QUOJO-DAWSON/online-boutique-gitops).
 
-**Application layer** â€” the Online Boutique: 11 polyglot microservices (Go, Python, Node.js, C#) communicating exclusively over mTLS within the Istio mesh.
+**Application layer** -- the Online Boutique: 11 polyglot microservices (Go, Python, Node.js, C#) communicating exclusively over mTLS within the Istio mesh, with HPA and PodDisruptionBudgets on all services.
 
 ---
 
@@ -65,78 +69,145 @@ The cluster is structured in three logical layers:
 | [ADR-001](docs/adr/001-istio-service-mesh.md) | Istio chosen over Linkerd and Cilium for service mesh | Accepted |
 | [ADR-002](docs/adr/002-argocd-gitops.md) | GitOps via ArgoCD over push-based CI/CD and Flux | Accepted |
 | [ADR-003](docs/adr/003-external-secrets-operator.md) | External Secrets Operator + AWS Secrets Manager over Sealed Secrets | Accepted |
+| [ADR-004](docs/adr/004-reliability-hpa-pdb.md) | HPA and PDB strategy for cluster add-ons and application workloads | Accepted |
 
 ---
 
 ## Repository Structure
-
 ```
 eks-infra-automation/
-â”œâ”€â”€ .github/workflows/
-â”‚   â”œâ”€â”€ bootstrap-backend.yaml        # S3 bucket + native state locking
-â”‚   â”œâ”€â”€ deploy-infrastructure.yaml    # Plan on PR, apply on merge to main
-â”‚   â””â”€â”€ destroy-infrastructure.yaml   # Manual teardown
-â”œâ”€â”€ argocd-apps/
-â”‚   â”œâ”€â”€ cluster-resources-argo-app.yaml
-â”‚   â””â”€â”€ online-boutique-argo-app.yaml
-â”œâ”€â”€ backend/
-â”‚   â”œâ”€â”€ main.tf                       # S3 backend configuration
-â”‚   â””â”€â”€ outputs.tf
-â”œâ”€â”€ docs/
-â”‚   â”œâ”€â”€ adr/                          # Architecture Decision Records
-â”‚   â”‚   â”œâ”€â”€ 001-istio-service-mesh.md
-â”‚   â”‚   â”œâ”€â”€ 002-argocd-gitops.md
-â”‚   â”‚   â””â”€â”€ 003-external-secrets-operator.md
-â”‚   â””â”€â”€ img/
-â”‚       â””â”€â”€ architecture.svg
-â”œâ”€â”€ argocd.tf
-â”œâ”€â”€ aws-load-balancer-controller.tf
-â”œâ”€â”€ cluster-autoscaler.tf
-â”œâ”€â”€ eks-main.tf                       # EKS cluster + VPC
-â”œâ”€â”€ external-secrets.tf
-â”œâ”€â”€ iam-roles.tf
-â”œâ”€â”€ istio.tf
-â”œâ”€â”€ istio-gateway-values.yaml
-â”œâ”€â”€ kube-resources.tf
-â”œâ”€â”€ metrics-server.tf
-â”œâ”€â”€ prometheus.tf
-â”œâ”€â”€ outputs.tf
-â”œâ”€â”€ providers.tf
-â”œâ”€â”€ terraform.tfvars
-â””â”€â”€ variables.tf
+|-- .github/workflows/
+|   |-- bootstrap-backend.yaml              # S3 bucket + native state locking
+|   |-- deploy-infrastructure.yaml          # tfsec + Trivy scan, plan on PR, apply on merge
+|   `-- destroy-infrastructure.yaml         # Manual teardown
+|-- argocd-apps/
+|   |-- cluster-resources-argo-app.yaml
+|   |-- online-boutique-argo-app.yaml       # dev environment
+|   |-- online-boutique-staging-argo-app.yaml
+|   `-- online-boutique-prod-argo-app.yaml
+|-- backend/
+|   |-- main.tf
+|   `-- outputs.tf
+|-- docs/
+|   |-- adr/
+|   |   |-- 001-istio-service-mesh.md
+|   |   |-- 002-argocd-gitops.md
+|   |   |-- 003-external-secrets-operator.md
+|   |   `-- 004-reliability-hpa-pdb.md
+|   |-- img/
+|   |   `-- architecture.svg
+|   `-- runbooks/
+|       |-- istio-troubleshooting.md
+|       |-- istio-fault-injection.md        # Chaos engineering -- 3 fault injection scenarios
+|       `-- terraform-operations.md
+|-- monitoring/
+|   |-- prometheus-alerts.yaml              # 14 SLO alert rules across 5 groups
+|   `-- grafana-dashboard.yaml              # 10-panel dashboard, auto-imported via ConfigMap
+|-- argocd.tf
+|-- aws-load-balancer-controller.tf
+|-- cluster-autoscaler.tf
+|-- eks-main.tf                             # EKS cluster + VPC
+|-- external-secrets.tf
+|-- iam-roles.tf
+|-- istio.tf
+|-- istio-gateway-values.yaml
+|-- kube-resources.tf
+|-- kyverno.tf                              # Kyverno admission controller
+|-- kyverno-policies.tf                     # 5 ClusterPolicies (policy-as-code)
+|-- metrics-server.tf
+|-- network-policies.tf                     # Zero-trust NetworkPolicies for online-boutique
+|-- prometheus.tf                           # Prometheus stack + AlertManager routing
+|-- reliability.tf                          # PodDisruptionBudgets for cluster add-ons
+|-- outputs.tf
+|-- providers.tf
+|-- terraform.tfvars
+`-- variables.tf
 ```
+
+---
+
+## Security Posture
+
+### CI/CD Security Scanning
+
+The deployment pipeline runs two parallel security jobs before any Terraform plan is allowed to proceed:
+
+- **tfsec** -- scans all Terraform files for infrastructure misconfigurations
+- **Trivy** -- scans for IaC misconfigs (CRITICAL/HIGH) and hard-blocks on any detected secrets (`exit-code: 1`)
+
+### Admission Control (Kyverno)
+
+Five ClusterPolicies are enforced at admission time across the cluster:
+
+| Policy | Action | Scope |
+|--------|--------|-------|
+| Disallow privileged containers | Enforce | Cluster-wide |
+| Disallow host namespaces (PID/IPC/Network) | Enforce | Cluster-wide |
+| Require non-root user | Enforce | online-boutique |
+| Disallow latest image tag | Enforce | online-boutique |
+| Require resource limits | Audit | online-boutique |
+
+### Network Segmentation
+
+Five NetworkPolicies enforce zero-trust L4 segmentation in the online-boutique namespace: default deny-all, allow intra-namespace, allow DNS egress, allow Istio control plane, allow Prometheus scrape.
+
+---
+
+## Observability
+
+| Component | Purpose |
+|-----------|---------|
+| Prometheus | Metrics collection with 14 SLO alert rules across 5 groups |
+| Grafana | 10-panel dashboard auto-imported via ConfigMap |
+| AlertManager | Severity-based Slack routing (critical -> #alerts-critical, warning -> #alerts-warning) with inhibit rules |
+| Istio telemetry | Per-service request rate, error rate, and latency (RED metrics) |
+
+---
+
+## Reliability
+
+| Component | Mechanism |
+|-----------|-----------|
+| Cluster add-ons | PodDisruptionBudgets (ArgoCD, Kyverno, Prometheus, Grafana) |
+| Application workloads | HPA (CPU-based, all 11 services) + PDBs (services with minReplicas >= 2) |
+| Node autoscaling | Cluster Autoscaler (min 1, max 5 nodes) |
+| Multi-env promotion | dev (1 replica) -> staging (2 replicas) -> prod (3 replicas) via Kustomize overlays |
 
 ---
 
 ## Tools and Technologies
 
 ### Infrastructure as Code
+
 | Tool | Purpose |
 |------|---------|
 | Terraform v1.12+ | All AWS and Kubernetes resource provisioning |
 | Helm | Kubernetes package management for add-ons |
-| Kustomize | Manifest customisation in the GitOps layer |
+| Kustomize | Multi-environment manifest customisation (dev/staging/prod) |
 
 ### AWS Services
+
 | Service | Role |
 |---------|------|
-| Amazon EKS | Managed Kubernetes control plane |
+| Amazon EKS | Managed Kubernetes control plane (v1.33) |
 | Amazon VPC | Multi-AZ networking (public + private subnets) |
 | AWS IAM + IRSA | Least-privilege pod-level AWS access via OIDC |
 | AWS ALB | External traffic ingress via Load Balancer Controller |
 | AWS Secrets Manager | Centralised secrets store (ESO backend) |
 
 ### Kubernetes Platform
+
 | Component | Role |
 |-----------|------|
 | Istio + Istio Gateway | mTLS, traffic management, ingress |
-| ArgoCD | GitOps continuous delivery |
-| Prometheus + Grafana + AlertManager | Metrics, dashboards, alerting |
+| ArgoCD | GitOps continuous delivery (dev/staging/prod apps) |
+| Kyverno | Admission control -- policy-as-code enforcement |
+| Prometheus + Grafana + AlertManager | Metrics, dashboards, Slack alert routing |
 | External Secrets Operator | Secrets sync from AWS Secrets Manager |
 | Cluster Autoscaler | Node group horizontal scaling |
 | Metrics Server | HPA metrics provider |
 | AWS Load Balancer Controller | ALB/NLB provisioning from Kubernetes |
-| GitHub Actions | CI/CD pipeline with OIDC (no stored credentials) |
+| GitHub Actions | CI/CD pipeline -- tfsec + Trivy scanning, OIDC auth |
 
 ---
 
@@ -146,42 +217,44 @@ eks-infra-automation/
 - Terraform v1.12.0 or later
 - `kubectl` CLI
 - `helm` CLI
-- An AWS account with an OIDC provider configured for GitHub Actions (see [GitHub OIDC setup](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services))
+- AWS account with OIDC provider configured for GitHub Actions
 
 ---
 
 ## Deployment
 
-The repository ships three GitHub Actions workflows that run in sequence:
+The repository ships three GitHub Actions workflows:
 
-### Step 1 â€” Bootstrap the Terraform Backend
+### Step 1 -- Bootstrap the Terraform Backend
 
-Run the **Bootstrap Backend** workflow (`workflow_dispatch`) once per AWS account. This creates the S3 bucket with native state locking used by all subsequent Terraform operations.
+Run the **Bootstrap Backend** workflow (`workflow_dispatch`) once per AWS account. This creates the S3 bucket with native state locking.
 
-### Step 2 â€” Deploy Infrastructure
+### Step 2 -- Deploy Infrastructure
 
-Push to `main` (or open a PR) to trigger the **Deploy Infrastructure** workflow:
-- **Pull Request** â†’ `terraform validate` + `terraform plan` (no apply)
-- **Push to `main`** â†’ `terraform apply` (full deployment)
+Push to `main` or open a PR to trigger the **Deploy Infrastructure** workflow:
 
-### Step 3 â€” Destroy Infrastructure
+- **Pull Request** -- tfsec scan + Trivy scan + `terraform validate` + `terraform plan` (no apply)
+- **Push to `main`** -- all scans pass, then `terraform apply`
 
-Run the **Destroy Infrastructure** workflow (`workflow_dispatch`) to tear everything down cleanly.
+### Step 3 -- Destroy Infrastructure
+
+Run the **Destroy Infrastructure** workflow (`workflow_dispatch`) to tear everything down.
 
 ---
 
-### GitHub Actions â€” Required Secrets
+### GitHub Actions -- Required Secrets
 
 | Secret | Description | Required |
 |--------|-------------|----------|
 | `ADMIN_USER_ARN` | ARN of the AWS IAM user granted cluster admin role | Yes |
 | `DEV_USER_ARN` | ARN of the AWS IAM user granted developer (read-only) role | Yes |
 | `ACTIONS_AWS_ROLE_ARN` | ARN of the IAM role GitHub Actions assumes via OIDC | Yes |
+| `SLACK_WEBHOOK_URL` | Slack incoming webhook for AlertManager notifications | Yes |
 | `GITOPS_URL` | GitOps repository URL (ArgoCD source) | If private repo |
 | `GITOPS_USERNAME` | Git username for ArgoCD | If private repo |
 | `GITOPS_PASSWORD` | Git token for ArgoCD | If private repo |
 
-### GitHub Actions â€” Required Variables
+### GitHub Actions -- Required Variables
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -200,32 +273,26 @@ Run the **Destroy Infrastructure** workflow (`workflow_dispatch`) to tear everyt
 | `kubernetes_version` | EKS version | `1.33` |
 | `environment` | Environment tag | `dev` |
 | `vpc_cidr_block` | VPC CIDR | `10.0.0.0/16` |
-| `private_subnets_cidr` | Private subnet CIDRs | `["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]` |
-| `public_subnets_cidr` | Public subnet CIDRs | `["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]` |
 | `node_group_instance_types` | EC2 instance types | `["t3.large"]` |
 | `node_group_min_size` | Minimum nodes | `1` |
 | `node_group_max_size` | Maximum nodes | `5` |
 | `node_group_desired_size` | Desired nodes | `2` |
+| `slack_webhook_url` | Slack webhook for AlertManager | `""` |
 
 ---
 
 ## Accessing Cluster UIs
 
-Once deployed, all UIs are accessible via `kubectl port-forward`:
-
-| Service | Port Forward | URL | Credentials |
-|---------|--------------|-----|-------------|
-| ArgoCD | `kubectl port-forward -n argocd svc/argocd-server 8080:443` | https://localhost:8080 | user: `admin` / pass: `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" \| base64 -d` |
-| Prometheus | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090` | http://localhost:9090 | None |
-| Grafana | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80` | http://localhost:3000 | user: `admin` / pass: `kubectl get secret -n monitoring kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" \| base64 -d` |
-| AlertManager | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093` | http://localhost:9093 | None |
+| Service | Port Forward | URL |
+|---------|--------------|-----|
+| ArgoCD | `kubectl port-forward -n argocd svc/argocd-server 8080:443` | https://localhost:8080 |
+| Prometheus | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090` | http://localhost:9090 |
+| Grafana | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80` | http://localhost:3000 |
+| AlertManager | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093` | http://localhost:9093 |
 
 ---
 
 ## Accessing the Cluster
-
-The cluster uses IAM-based access entries. Two roles are provisioned: `external-admin` (full access) and `external-dev` (read-only to app namespaces).
-
 ```bash
 # 1. Assume the admin role
 ROLE_OUTPUT=$(aws sts assume-role \
@@ -250,22 +317,24 @@ aws eks update-kubeconfig --region <REGION> --name <CLUSTER_NAME>
 
 | Repository | Purpose |
 |------------|---------|
-| [eks-infra-automation](https://github.com/QUOJO-DAWSON/eks-infra-automation) | This repo â€” cluster infrastructure |
+| [eks-infra-automation](https://github.com/QUOJO-DAWSON/eks-infra-automation) | This repo -- cluster infrastructure |
 | [online-boutique-application](https://github.com/QUOJO-DAWSON/online-boutique-application) | Microservices source code + CI pipeline |
-| [online-boutique-gitops](https://github.com/QUOJO-DAWSON/online-boutique-gitops) | Kubernetes manifests watched by ArgoCD |
+| [online-boutique-gitops](https://github.com/QUOJO-DAWSON/online-boutique-gitops) | Kubernetes manifests -- dev/staging/prod overlays |
 
 ---
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m 'feat: description'`
-4. Push and open a Pull Request â€” CI will run `terraform validate` and `terraform plan`
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
 ## License
 
 [MIT](LICENSE)
-
