@@ -41,8 +41,3 @@ output "configure_kubectl" {
   description = "Run this command to configure kubectl access to the cluster after assuming the admin IAM role."
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
 }
-
-output "node_group_role_arn" {
-  description = "ARN of the IAM role attached to the EKS managed node group."
-  value       = module.eks.eks_managed_node_groups["dev"].iam_role_arn
-}
