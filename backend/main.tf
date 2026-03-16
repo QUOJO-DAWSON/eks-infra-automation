@@ -10,7 +10,7 @@ provider "aws" {
   region = "us-east-1"
 }
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "tf-state-eks-infra-automation-7910"
+  bucket = "tf-state-eks-infra-271758791081"
 
   lifecycle {
     prevent_destroy = false
