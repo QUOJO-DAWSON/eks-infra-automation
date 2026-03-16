@@ -1,4 +1,4 @@
-terraform {
+﻿terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -10,7 +10,7 @@ provider "aws" {
   region = "us-east-1"
 }
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "tf-state-eks-infra-automation-6839"
+  bucket = "tf-state-eks-infra-automation-7910"
 
   lifecycle {
     prevent_destroy = false
