@@ -6,20 +6,16 @@
   namespace        = "kyverno"
   create_namespace = true
 
-  set {
-    name  = "admissionController.replicas"
-    value = "1"
-  }
-
-  set {
-    name  = "backgroundController.enabled"
-    value = "true"
-  }
-
-  set {
-    name  = "reportsController.enabled"
-    value = "true"
-  }
+  values = [
+    <<-EOF
+    admissionController:
+      replicas: 1
+    backgroundController:
+      enabled: true
+    reportsController:
+      enabled: true
+    EOF
+  ]
 
   depends_on = [module.eks]
 }
