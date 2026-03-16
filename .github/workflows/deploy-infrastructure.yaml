@@ -120,8 +120,11 @@ jobs:
         run: |
           terraform plan -no-color -input=false -out=tfplan \
             -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
-            -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}" \
-            | tee plan_output.txt
+            -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
+
+      - name: Capture Plan Output
+        run: terraform show -no-color tfplan > plan_output.txt
+        continue-on-error: true
 
       - name: Upload Plan artifact
         uses: actions/upload-artifact@v4.6.2
