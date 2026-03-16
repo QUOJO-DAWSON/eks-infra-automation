@@ -32,7 +32,8 @@ jobs:
 
       - name: Install tfsec
         run: |
-          curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+          curl -sL https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 -o /usr/local/bin/tfsec
+          chmod +x /usr/local/bin/tfsec
 
       - name: Run tfsec (SARIF output)
         run: tfsec . --format sarif --out tfsec.sarif --soft-fail --workspace ${{ github.workspace }}
