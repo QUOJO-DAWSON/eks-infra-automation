@@ -61,7 +61,6 @@ jobs:
           format: table
           exit-code: 0
           severity: CRITICAL,HIGH
-          trivyignores: .trivyignore
 
       - name: Run Trivy secret scan
         uses: aquasecurity/trivy-action@0.30.0
