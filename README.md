@@ -87,22 +87,30 @@ The platform runs the [Online Boutique](https://github.com/QUOJO-DAWSON/online-b
 eks-infra-automation/
 ├── .github/
 │   └── workflows/
-│       ├── deploy-infrastructure.yaml   # Main CI/CD pipeline
-│       └── destroy-infrastructure.yaml  # Manual teardown (requires DESTROY input)
-├── modules/
-│   └── eks/                             # EKS module with managed node groups
+│       ├── deploy-infrastructure.yaml        # Main CI/CD pipeline
+│       └── destroy-infrastructure.yaml       # Manual teardown (requires DESTROY input)
 ├── docs/
-│   └── screenshots/                     # Sprint 2 verification evidence
-├── main.tf                              # VPC + EKS root config
-├── providers.tf                         # AWS, Kubernetes, Helm, Time providers
-├── helm.tf                              # All platform Helm releases
-├── kyverno-policies.tf                  # Admission control policies
-├── network-policies.tf                  # Namespace-level network segmentation
-├── reliability.tf                       # PodDisruptionBudgets
-├── irsa.tf                              # IAM Roles for Service Accounts
-├── prometheus.tf                        # kube-prometheus-stack config
-├── eks-local-access.tf                  # Local IAM access entry
-└── variables.tf
+│   └── screenshots/                          # Sprint 2 verification evidence
+├── argocd.tf                                 # ArgoCD Helm release
+├── aws-load-balancer-controller.tf           # ALB Controller Helm release + IRSA
+├── cluster-autoscaler.tf                     # Cluster Autoscaler Helm release + IRSA
+├── eks-local-access.tf                       # Local IAM user EKS access entry
+├── eks-main.tf                               # VPC + EKS cluster + node group
+├── external-secrets.tf                       # External Secrets Operator + IRSA
+├── iam-roles.tf                              # External admin/developer IAM roles
+├── istio.tf                                  # Istio base, istiod, ingress gateway
+├── istio-gateway-values.yaml                 # Istio ingress gateway Helm values
+├── kube-resources.tf                         # Kubernetes namespace resources
+├── kyverno.tf                                # Kyverno Helm release
+├── kyverno-policies.tf                       # Admission control ClusterPolicies
+├── metrics-server.tf                         # Metrics Server Helm release
+├── network-policies.tf                       # Namespace-level NetworkPolicies
+├── outputs.tf                                # Terraform outputs
+├── prometheus.tf                             # kube-prometheus-stack config
+├── providers.tf                              # AWS, Kubernetes, Helm, Time providers
+├── reliability.tf                            # PodDisruptionBudgets
+├── terraform.tfvars                          # Variable values
+└── variables.tf                              # Input variable definitions
 ```
 
 ---
