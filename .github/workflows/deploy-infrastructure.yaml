@@ -261,6 +261,12 @@ jobs:
             -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
             -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
 
+      - name: Pre-Phase 2 Cleanup - Remove stuck Helm releases
+        run: |
+          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name eks-platform-eks-cluster
+          helm uninstall kube-prometheus-stack -n monitoring 2>/dev/null || true
+          helm uninstall argo-cd -n argocd 2>/dev/null || true
+
       - name: Phase 2 - Apply Platform Add-ons
         run: |
           terraform apply -auto-approve \
