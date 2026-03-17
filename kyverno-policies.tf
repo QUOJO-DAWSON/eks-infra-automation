@@ -1,5 +1,10 @@
-﻿resource "kubernetes_manifest" "policy_disallow_privileged" {
-  depends_on = [helm_release.kyverno]
+﻿resource "time_sleep" "wait_for_kyverno_crds" {
+  depends_on      = [helm_release.kyverno]
+  create_duration = "30s"
+}
+
+resource "kubernetes_manifest" "policy_disallow_privileged" {
+  depends_on = [time_sleep.wait_for_kyverno_crds]
 
   manifest = {
     apiVersion = "kyverno.io/v1"
@@ -48,7 +53,7 @@
 }
 
 resource "kubernetes_manifest" "policy_require_non_root" {
-  depends_on = [helm_release.kyverno]
+  depends_on = [time_sleep.wait_for_kyverno_crds]
 
   manifest = {
     apiVersion = "kyverno.io/v1"
@@ -98,7 +103,7 @@ resource "kubernetes_manifest" "policy_require_non_root" {
 }
 
 resource "kubernetes_manifest" "policy_require_resource_limits" {
-  depends_on = [helm_release.kyverno]
+  depends_on = [time_sleep.wait_for_kyverno_crds]
 
   manifest = {
     apiVersion = "kyverno.io/v1"
@@ -151,7 +156,7 @@ resource "kubernetes_manifest" "policy_require_resource_limits" {
 }
 
 resource "kubernetes_manifest" "policy_disallow_latest_tag" {
-  depends_on = [helm_release.kyverno]
+  depends_on = [time_sleep.wait_for_kyverno_crds]
 
   manifest = {
     apiVersion = "kyverno.io/v1"
@@ -199,7 +204,7 @@ resource "kubernetes_manifest" "policy_disallow_latest_tag" {
 }
 
 resource "kubernetes_manifest" "policy_disallow_host_namespaces" {
-  depends_on = [helm_release.kyverno]
+  depends_on = [time_sleep.wait_for_kyverno_crds]
 
   manifest = {
     apiVersion = "kyverno.io/v1"

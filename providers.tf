@@ -4,10 +4,9 @@
     key          = "terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
-    use_lockfile = true                              # Enable S3 native state locking, remove if using DynamoDB for state locking
-    /*dynamodb_table = "terraform-eks-state-locks"*/ # Uncomment if using DynamoDB for state locking
+    use_lockfile = true
+    /*dynamodb_table = "terraform-eks-state-locks"*/
   }
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -20,6 +19,10 @@
     helm = {
       source  = "hashicorp/helm"
       version = ">= 3.0"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.9"
     }
   }
 }
