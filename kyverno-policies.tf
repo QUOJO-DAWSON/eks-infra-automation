@@ -232,6 +232,16 @@ resource "kubernetes_manifest" "policy_disallow_host_namespaces" {
               }
             ]
           }
+          exclude = {
+            any = [
+              {
+                resources = {
+                  kinds      = ["Pod"]
+                  namespaces = ["monitoring", "kube-system", "istio-system", "istio-ingress"]
+                }
+              }
+            ]
+          }
           validate = {
             message = "Host namespaces (hostPID, hostIPC, hostNetwork) are not allowed."
             pattern = {
