@@ -256,6 +256,6 @@ This project is a portfolio piece targeting mid-level and senior DevOps/Platform
 
 ## Author
 
-**George Dawson-Kesson** — AWS Certified Solutions Architect – Associate  
+**George Dawson-Kesson** — AWS Certified Solutions Architect – Associate (SAA-C03)  
 Portfolio: [gdawsonkesson.com](https://gdawsonkesson.com)  
 GitHub: [QUOJO-DAWSON](https://github.com/QUOJO-DAWSON)
