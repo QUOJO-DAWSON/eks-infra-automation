@@ -254,6 +254,13 @@ jobs:
             -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
             -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
 
+      - name: Phase 1.5 - Install Kyverno (CRD bootstrap)
+        run: |
+          terraform apply -auto-approve \
+            -target=helm_release.kyverno \
+            -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
+            -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
+
       - name: Phase 2 - Apply Platform Add-ons
         run: |
           terraform apply -auto-approve \
