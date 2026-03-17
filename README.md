@@ -1,340 +1,253 @@
-﻿# EKS Infrastructure Automation
+﻿# eks-infra-automation
 
-> **Production-grade EKS platform** -- Terraform-automated Kubernetes cluster with Istio service mesh, ArgoCD GitOps delivery, Kyverno policy-as-code, Prometheus/Grafana/AlertManager observability, and GitHub Actions CI/CD with tfsec and Trivy security scanning. Deploys a full 11-service microservices workload ([Online Boutique](https://github.com/QUOJO-DAWSON/online-boutique-application)) across dev, staging, and prod environments in a reproducible, zero-manual-steps workflow.
-
-[![Terraform](https://img.shields.io/badge/Terraform-v1.12%2B-7B42BC?logo=terraform)](https://www.terraform.io/)
-[![Kubernetes](https://img.shields.io/badge/EKS-v1.33-326CE5?logo=kubernetes)](https://kubernetes.io/)
-[![Istio](https://img.shields.io/badge/Istio-Service%20Mesh-466BB0?logo=istio)](https://istio.io/)
-[![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?logo=argo)](https://argoproj.github.io/cd/)
-[![Kyverno](https://img.shields.io/badge/Kyverno-Policy--as--Code-00A9E0)](https://kyverno.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+> Production-grade EKS platform built with Terraform, secured with Kyverno, observed with Prometheus/Grafana, and delivered via GitOps with ArgoCD. Built as a portfolio demonstration of FAANG-level DevOps engineering practices.
 
 ---
 
-## Problem Statement
+## What This Is
 
-Managing Kubernetes at scale requires more than a working cluster. Teams need **consistent, auditable deployments** (GitOps), **zero-trust networking** between services (service mesh), **early visibility into regressions** (observability), **secrets that never touch Git** (external secrets management), and **policy guardrails that enforce security standards at admission time** (policy-as-code).
+This repo provisions and manages a complete Kubernetes platform on AWS EKS — from the VPC up. It is not a tutorial follow-along. Every design decision reflects how platform teams at scale operate: security scanning in CI before a single resource is created, policy enforcement at admission time, GitOps as the only path to production, and observability baked in from day one.
 
-This repository delivers a **turn-key, opinionated EKS platform** that wires all five concerns together through Terraform, allowing teams to focus on application delivery rather than infrastructure plumbing. It targets the pattern used by platform engineering teams at mid-to-large companies -- where a single IaC repository stands up the full cluster and its operational tooling reproducibly.
-
----
-
-## Key Metrics
-
-| Metric | Value |
-|--------|-------|
-| Cluster provisioning time | ~12 minutes (cold, from `terraform apply`) |
-| Full workload deployment | ~3 minutes post-cluster (ArgoCD initial sync) |
-| Zero-downtime deployments | Yes -- ArgoCD rolling sync + Istio traffic shifting |
-| Secrets in Git | 0 -- all secrets via AWS Secrets Manager + ESO |
-| Manual kubectl steps | 0 -- full GitOps, cluster state is 100% declarative |
-| Inter-service encryption | 100% mTLS via Istio (zero application code changes) |
-| Terraform resources managed | ~90 across 14 `.tf` files |
-| Kyverno policies enforced | 5 ClusterPolicies (privileged, root, host namespaces, latest tag, resource limits) |
-| Environments | 3 -- dev, staging, prod via Kustomize overlays |
+The platform runs the [Online Boutique](https://github.com/QUOJO-DAWSON/online-boutique-gitops) microservices application — an 11-service e-commerce demo — as the workload, with full Istio service mesh, HPA, PodDisruptionBudgets, and NetworkPolicies applied across the board.
 
 ---
 
 ## Architecture
-
-![Architecture Diagram](docs/img/architecture.svg)
-
-### System Overview
 ```
-Internet -> ALB -> Istio Gateway -> VirtualService -> Microservices (mTLS)
-                                          |
-GitHub Actions ---- Terraform ---- EKS Cluster
-                                          |
-GitOps Repo ---- ArgoCD --------- Workloads + Add-ons
-                                          |
-AWS Secrets Manager ---- ESO ---- Kubernetes Secrets
-                                          |
-Kyverno ---- Admission Webhook ---- Policy Enforcement
+┌─────────────────────────────────────────────────────────────────┐
+│                        GitHub Actions CI/CD                      │
+│  tfsec → Trivy → Terraform Plan → Phase 1 → Phase 1.5 → Phase 2 │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │ OIDC (no long-lived credentials)
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                          AWS (us-east-2)                         │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    VPC (3 AZs)                            │   │
+│  │  Public Subnets (NAT GW, ALB)                            │   │
+│  │  Private Subnets (EKS Nodes)                             │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              EKS 1.33 (Managed Node Group)                │   │
+│  │  t3.medium | desired=1 | min=1 | max=5 | KMS encrypted   │   │
+│  │                                                           │   │
+│  │  Platform Layer (Helm)          Workload Layer (ArgoCD)  │   │
+│  │  ├── ArgoCD v3.1.0              └── online-boutique       │   │
+│  │  ├── Kyverno 3.2.6                  ├── 11 microservices │   │
+│  │  ├── Istio 1.26.2                   ├── Istio sidecar    │   │
+│  │  ├── kube-prometheus-stack          ├── HPA per service  │   │
+│  │  ├── AWS Load Balancer Controller   ├── PDB per service  │   │
+│  │  ├── Cluster Autoscaler             └── NetworkPolicies  │   │
+│  │  ├── External Secrets Operator                           │   │
+│  │  └── Metrics Server                                      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  S3 (Terraform state) │ Secrets Manager │ IAM IRSA              │
+└─────────────────────────────────────────────────────────────────┘
 ```
-
-The cluster is structured in three logical layers:
-
-**Platform layer** -- deployed by Terraform: VPC, EKS, IAM roles, Istio, ArgoCD, External Secrets Operator, Prometheus stack, Kyverno admission controller, Cluster Autoscaler, Metrics Server, AWS Load Balancer Controller, NetworkPolicies, PodDisruptionBudgets.
-
-**GitOps layer** -- managed by ArgoCD: cluster resources (namespaces, RBAC) and the Online Boutique application across dev, staging, and prod environments, sourced from the [GitOps repo](https://github.com/QUOJO-DAWSON/online-boutique-gitops).
-
-**Application layer** -- the Online Boutique: 11 polyglot microservices (Go, Python, Node.js, C#) communicating exclusively over mTLS within the Istio mesh, with HPA and PodDisruptionBudgets on all services.
 
 ---
 
-## Architecture Decision Records
+## Screenshots
 
-| ADR | Decision | Status |
-|-----|----------|--------|
-| [ADR-001](docs/adr/001-istio-service-mesh.md) | Istio chosen over Linkerd and Cilium for service mesh | Accepted |
-| [ADR-002](docs/adr/002-argocd-gitops.md) | GitOps via ArgoCD over push-based CI/CD and Flux | Accepted |
-| [ADR-003](docs/adr/003-external-secrets-operator.md) | External Secrets Operator + AWS Secrets Manager over Sealed Secrets | Accepted |
-| [ADR-004](docs/adr/004-reliability-hpa-pdb.md) | HPA and PDB strategy for cluster add-ons and application workloads | Accepted |
+| What | Screenshot |
+|------|-----------|
+| GitHub Actions — all green | ![CI](docs/screenshots/09-github-actions-run84-success.png) |
+| ArgoCD — Online Boutique Healthy | ![ArgoCD](docs/screenshots/05-argocd-online-boutique-healthy.png) |
+| ArgoCD — Full Resource Tree | ![Tree](docs/screenshots/06-argocd-resource-tree.png) |
+| Grafana — Kubernetes Cluster Metrics | ![Grafana](docs/screenshots/08-grafana-kubernetes-cluster-metrics.png) |
+
+---
+
+## Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Cloud | AWS (us-east-2) |
+| IaC | Terraform 1.12 |
+| Kubernetes | EKS 1.33 |
+| CI/CD | GitHub Actions + OIDC |
+| GitOps | ArgoCD v3.1.0 |
+| Policy | Kyverno 3.2.6 |
+| Service Mesh | Istio 1.26.2 |
+| Observability | Prometheus + Grafana (kube-prometheus-stack 76.4.0) |
+| Secrets | External Secrets Operator + AWS Secrets Manager |
+| Ingress | AWS Load Balancer Controller 1.13.3 |
+| Autoscaling | Cluster Autoscaler + HPA |
+| State Backend | S3 + native locking |
+| Image Scanning | Trivy (IaC + secrets) |
+| SAST | tfsec |
 
 ---
 
 ## Repository Structure
 ```
 eks-infra-automation/
-|-- .github/workflows/
-|   |-- bootstrap-backend.yaml              # S3 bucket + native state locking
-|   |-- deploy-infrastructure.yaml          # tfsec + Trivy scan, plan on PR, apply on merge
-|   `-- destroy-infrastructure.yaml         # Manual teardown
-|-- argocd-apps/
-|   |-- cluster-resources-argo-app.yaml
-|   |-- online-boutique-argo-app.yaml       # dev environment
-|   |-- online-boutique-staging-argo-app.yaml
-|   `-- online-boutique-prod-argo-app.yaml
-|-- backend/
-|   |-- main.tf
-|   `-- outputs.tf
-|-- docs/
-|   |-- adr/
-|   |   |-- 001-istio-service-mesh.md
-|   |   |-- 002-argocd-gitops.md
-|   |   |-- 003-external-secrets-operator.md
-|   |   `-- 004-reliability-hpa-pdb.md
-|   |-- img/
-|   |   `-- architecture.svg
-|   `-- runbooks/
-|       |-- istio-troubleshooting.md
-|       |-- istio-fault-injection.md        # Chaos engineering -- 3 fault injection scenarios
-|       `-- terraform-operations.md
-|-- monitoring/
-|   |-- prometheus-alerts.yaml              # 14 SLO alert rules across 5 groups
-|   `-- grafana-dashboard.yaml              # 10-panel dashboard, auto-imported via ConfigMap
-|-- argocd.tf
-|-- aws-load-balancer-controller.tf
-|-- cluster-autoscaler.tf
-|-- eks-main.tf                             # EKS cluster + VPC
-|-- external-secrets.tf
-|-- iam-roles.tf
-|-- istio.tf
-|-- istio-gateway-values.yaml
-|-- kube-resources.tf
-|-- kyverno.tf                              # Kyverno admission controller
-|-- kyverno-policies.tf                     # 5 ClusterPolicies (policy-as-code)
-|-- metrics-server.tf
-|-- network-policies.tf                     # Zero-trust NetworkPolicies for online-boutique
-|-- prometheus.tf                           # Prometheus stack + AlertManager routing
-|-- reliability.tf                          # PodDisruptionBudgets for cluster add-ons
-|-- outputs.tf
-|-- providers.tf
-|-- terraform.tfvars
-`-- variables.tf
+├── .github/
+│   └── workflows/
+│       ├── deploy-infrastructure.yaml   # Main CI/CD pipeline
+│       └── destroy-infrastructure.yaml  # Manual teardown (requires DESTROY input)
+├── modules/
+│   └── eks/                             # EKS module with managed node groups
+├── docs/
+│   └── screenshots/                     # Sprint 2 verification evidence
+├── main.tf                              # VPC + EKS root config
+├── providers.tf                         # AWS, Kubernetes, Helm, Time providers
+├── helm.tf                              # All platform Helm releases
+├── kyverno-policies.tf                  # Admission control policies
+├── network-policies.tf                  # Namespace-level network segmentation
+├── reliability.tf                       # PodDisruptionBudgets
+├── irsa.tf                              # IAM Roles for Service Accounts
+├── prometheus.tf                        # kube-prometheus-stack config
+├── eks-local-access.tf                  # Local IAM access entry
+└── variables.tf
 ```
 
 ---
 
-## Security Posture
+## CI/CD Pipeline
 
-### CI/CD Security Scanning
+Every push to `main` runs through four sequential jobs with no manual gates:
+```
+Security Scan (tfsec)  ──┐
+                          ├──► Validate & Plan ──► Apply Infrastructure
+Security Scan (Trivy)  ──┘
+```
 
-The deployment pipeline runs two parallel security jobs before any Terraform plan is allowed to proceed:
+The apply itself runs in three phases to handle Kubernetes CRD bootstrapping:
 
-- **tfsec** -- scans all Terraform files for infrastructure misconfigurations
-- **Trivy** -- scans for IaC misconfigs (CRITICAL/HIGH) and hard-blocks on any detected secrets (`exit-code: 1`)
+**Phase 1** — AWS infrastructure: VPC, EKS cluster, node groups, IAM roles, KMS encryption
+
+**Phase 1.5** — Kyverno Helm install only: ensures CRDs are registered before policies are applied (solves the `no matches for kind "ClusterPolicy"` race condition)
+
+**Phase 2** — Full platform: all remaining Helm releases, Kyverno policies, NetworkPolicies, PDBs
+
+Authentication uses OIDC — no AWS access keys are stored anywhere.
+
+---
+
+## Security
 
 ### Admission Control (Kyverno)
 
-Five ClusterPolicies are enforced at admission time across the cluster:
+| Policy | Mode | What it enforces |
+|--------|------|-----------------|
+| `disallow-privileged-containers` | Enforce | No privileged pods cluster-wide |
+| `disallow-host-namespaces` | Enforce | No hostPID/hostIPC/hostNetwork (system namespaces excluded) |
+| `disallow-latest-tag` | Enforce | All images in online-boutique must use explicit tags |
+| `require-resource-limits` | Audit | CPU/memory limits must be defined |
+| `require-non-root-user` | Audit | Containers should run as non-root (audit mode for upstream image compatibility) |
 
-| Policy | Action | Scope |
-|--------|--------|-------|
-| Disallow privileged containers | Enforce | Cluster-wide |
-| Disallow host namespaces (PID/IPC/Network) | Enforce | Cluster-wide |
-| Require non-root user | Enforce | online-boutique |
-| Disallow latest image tag | Enforce | online-boutique |
-| Require resource limits | Audit | online-boutique |
+> `require-non-root-user` is deliberately set to Audit. The Online Boutique upstream images run as root at the OS level — enforcing this would block the workload entirely. The policy detects and reports violations without blocking, which is the correct production pattern for third-party workloads you don't build yourself.
 
 ### Network Segmentation
 
-Five NetworkPolicies enforce zero-trust L4 segmentation in the online-boutique namespace: default deny-all, allow intra-namespace, allow DNS egress, allow Istio control plane, allow Prometheus scrape.
+The `online-boutique` namespace operates under a default-deny-all NetworkPolicy. Explicit allow rules permit only intra-namespace traffic, Istio control plane communication, Prometheus scraping, and DNS egress.
+
+### Secret Management
+
+Secrets never touch the codebase or CI environment. The External Secrets Operator pulls from AWS Secrets Manager at runtime using IRSA — the pod gets the secret, never the pipeline.
 
 ---
 
 ## Observability
 
-| Component | Purpose |
-|-----------|---------|
-| Prometheus | Metrics collection with 14 SLO alert rules across 5 groups |
-| Grafana | 10-panel dashboard auto-imported via ConfigMap |
-| AlertManager | Severity-based Slack routing (critical -> #alerts-critical, warning -> #alerts-warning) with inhibit rules |
-| Istio telemetry | Per-service request rate, error rate, and latency (RED metrics) |
+Prometheus scrapes all namespaces. Grafana ships with pre-built Kubernetes dashboards:
+
+- Kubernetes / Compute Resources / Cluster
+- Kubernetes / Compute Resources / Namespace (Pods)
+- Kubernetes / API Server
+- Istio mesh dashboards
+
+AlertManager is configured with Slack routing for critical alerts.
+
+Access Grafana locally:
+```bash
+kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80
+# http://localhost:3000 | admin / prom-operator
+```
+
+---
+
+## GitOps
+
+ArgoCD manages the Online Boutique workload from a separate repo: [online-boutique-gitops](https://github.com/QUOJO-DAWSON/online-boutique-gitops)
+
+The platform repo provisions ArgoCD. The application repo defines what ArgoCD deploys. These concerns are intentionally separated — infrastructure engineers own this repo, application teams own theirs.
+```
+online-boutique-gitops/
+├── base/              # Kubernetes manifests
+├── app-config/        # ExternalSecret, VirtualService, HPA, PDB
+└── overlays/
+    ├── dev/           # Dev environment (active)
+    ├── staging/       # Staging overlay
+    └── prod/          # Production overlay
+```
+
+Access ArgoCD locally:
+```bash
+kubectl port-forward svc/argo-cd-argocd-server -n argocd 8080:443
+# https://localhost:8080 | admin / (kubectl get secret argocd-initial-admin-secret -n argocd ...)
+```
 
 ---
 
 ## Reliability
 
-| Component | Mechanism |
-|-----------|-----------|
-| Cluster add-ons | PodDisruptionBudgets (ArgoCD, Kyverno, Prometheus, Grafana) |
-| Application workloads | HPA (CPU-based, all 11 services) + PDBs (services with minReplicas >= 2) |
-| Node autoscaling | Cluster Autoscaler (min 1, max 5 nodes) |
-| Multi-env promotion | dev (1 replica) -> staging (2 replicas) -> prod (3 replicas) via Kustomize overlays |
+Every critical service in the Online Boutique has:
+
+- **HPA** — scales on CPU, min/max replicas defined per service risk profile
+- **PDB** — ensures at least 1 replica stays available during node disruptions
+- **Cluster Autoscaler** — scales nodes from 1 to 5 based on pending pod pressure
 
 ---
 
-## Tools and Technologies
+## Local Access
 
-### Infrastructure as Code
-
-| Tool | Purpose |
-|------|---------|
-| Terraform v1.12+ | All AWS and Kubernetes resource provisioning |
-| Helm | Kubernetes package management for add-ons |
-| Kustomize | Multi-environment manifest customisation (dev/staging/prod) |
-
-### AWS Services
-
-| Service | Role |
-|---------|------|
-| Amazon EKS | Managed Kubernetes control plane (v1.33) |
-| Amazon VPC | Multi-AZ networking (public + private subnets) |
-| AWS IAM + IRSA | Least-privilege pod-level AWS access via OIDC |
-| AWS ALB | External traffic ingress via Load Balancer Controller |
-| AWS Secrets Manager | Centralised secrets store (ESO backend) |
-
-### Kubernetes Platform
-
-| Component | Role |
-|-----------|------|
-| Istio + Istio Gateway | mTLS, traffic management, ingress |
-| ArgoCD | GitOps continuous delivery (dev/staging/prod apps) |
-| Kyverno | Admission control -- policy-as-code enforcement |
-| Prometheus + Grafana + AlertManager | Metrics, dashboards, Slack alert routing |
-| External Secrets Operator | Secrets sync from AWS Secrets Manager |
-| Cluster Autoscaler | Node group horizontal scaling |
-| Metrics Server | HPA metrics provider |
-| AWS Load Balancer Controller | ALB/NLB provisioning from Kubernetes |
-| GitHub Actions | CI/CD pipeline -- tfsec + Trivy scanning, OIDC auth |
-
----
-
-## Prerequisites
-
-- AWS CLI configured with permissions to create EKS, VPC, IAM, and S3 resources
-- Terraform v1.12.0 or later
-- `kubectl` CLI
-- `helm` CLI
-- AWS account with OIDC provider configured for GitHub Actions
-
----
-
-## Deployment
-
-The repository ships three GitHub Actions workflows:
-
-### Step 1 -- Bootstrap the Terraform Backend
-
-Run the **Bootstrap Backend** workflow (`workflow_dispatch`) once per AWS account. This creates the S3 bucket with native state locking.
-
-### Step 2 -- Deploy Infrastructure
-
-Push to `main` or open a PR to trigger the **Deploy Infrastructure** workflow:
-
-- **Pull Request** -- tfsec scan + Trivy scan + `terraform validate` + `terraform plan` (no apply)
-- **Push to `main`** -- all scans pass, then `terraform apply`
-
-### Step 3 -- Destroy Infrastructure
-
-Run the **Destroy Infrastructure** workflow (`workflow_dispatch`) to tear everything down.
-
----
-
-### GitHub Actions -- Required Secrets
-
-| Secret | Description | Required |
-|--------|-------------|----------|
-| `ADMIN_USER_ARN` | ARN of the AWS IAM user granted cluster admin role | Yes |
-| `DEV_USER_ARN` | ARN of the AWS IAM user granted developer (read-only) role | Yes |
-| `ACTIONS_AWS_ROLE_ARN` | ARN of the IAM role GitHub Actions assumes via OIDC | Yes |
-| `SLACK_WEBHOOK_URL` | Slack incoming webhook for AlertManager notifications | Yes |
-| `GITOPS_URL` | GitOps repository URL (ArgoCD source) | If private repo |
-| `GITOPS_USERNAME` | Git username for ArgoCD | If private repo |
-| `GITOPS_PASSWORD` | Git token for ArgoCD | If private repo |
-
-### GitHub Actions -- Required Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `AWS_REGION` | Target AWS region | `us-east-1` |
-
-> **Security note:** GitHub Actions authenticates to AWS via OIDC (`AssumeRoleWithWebIdentity`). No AWS credentials are stored as GitHub Secrets.
-
----
-
-## Configuration Reference
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `aws_region` | AWS region | `us-east-1` |
-| `project_name` | Resource name prefix | `eks-platform` |
-| `kubernetes_version` | EKS version | `1.33` |
-| `environment` | Environment tag | `dev` |
-| `vpc_cidr_block` | VPC CIDR | `10.0.0.0/16` |
-| `node_group_instance_types` | EC2 instance types | `["t3.large"]` |
-| `node_group_min_size` | Minimum nodes | `1` |
-| `node_group_max_size` | Maximum nodes | `5` |
-| `node_group_desired_size` | Desired nodes | `2` |
-| `slack_webhook_url` | Slack webhook for AlertManager | `""` |
-
----
-
-## Accessing Cluster UIs
-
-| Service | Port Forward | URL |
-|---------|--------------|-----|
-| ArgoCD | `kubectl port-forward -n argocd svc/argocd-server 8080:443` | https://localhost:8080 |
-| Prometheus | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090` | http://localhost:9090 |
-| Grafana | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80` | http://localhost:3000 |
-| AlertManager | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093` | http://localhost:9093 |
-
----
-
-## Accessing the Cluster
+After deploying, configure kubectl:
 ```bash
-# 1. Assume the admin role
-ROLE_OUTPUT=$(aws sts assume-role \
-  --role-arn arn:aws:iam::<ACCOUNT_ID>:role/external-admin \
-  --role-session-name eks-access \
-  --profile admin)
-
-# 2. Export temporary credentials
-export AWS_ACCESS_KEY_ID=$(echo $ROLE_OUTPUT | jq -r '.Credentials.AccessKeyId')
-export AWS_SECRET_ACCESS_KEY=$(echo $ROLE_OUTPUT | jq -r '.Credentials.SecretAccessKey')
-export AWS_SESSION_TOKEN=$(echo $ROLE_OUTPUT | jq -r '.Credentials.SessionToken')
-
-# 3. Configure kubectl
-aws eks update-kubeconfig --region <REGION> --name <CLUSTER_NAME>
+aws eks update-kubeconfig --region us-east-2 --name eks-platform-eks-cluster
+kubectl get nodes
+kubectl get pods -A
+helm list -A
 ```
 
-> These credentials are session-scoped. Run all subsequent commands in the same terminal.
+Your IAM identity needs an EKS access entry — see `eks-local-access.tf`.
 
 ---
 
-## Related Repositories
+## Destroy
 
-| Repository | Purpose |
-|------------|---------|
-| [eks-infra-automation](https://github.com/QUOJO-DAWSON/eks-infra-automation) | This repo -- cluster infrastructure |
-| [online-boutique-application](https://github.com/QUOJO-DAWSON/online-boutique-application) | Microservices source code + CI pipeline |
-| [online-boutique-gitops](https://github.com/QUOJO-DAWSON/online-boutique-gitops) | Kubernetes manifests -- dev/staging/prod overlays |
+Infrastructure teardown is a GitHub Actions manual workflow — it will not run on push.
+
+Go to **Actions → Destroy Infrastructure → Run workflow** and type `DESTROY` to confirm. This prevents accidental teardown and keeps the destroy auditable.
 
 ---
 
-## Contributing
+## Known Issues & Honest Notes
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
----
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for release history.
+- **Kyverno cleanup CronJob ImagePullBackOff** — a known issue with Kyverno 3.2.6 cleanup controller image tags on certain registries. Core admission control is unaffected.
+- **tfsec exit code 3 annotation** — GitHub Actions annotation from the plan step using `-detailed-exitcode`. The job succeeds; this is a CI wrapper quirk, not a Terraform error.
+- **`require-non-root-user` in Audit mode** — documented above under Security. This is intentional, not an oversight.
 
 ---
 
-## License
+## What This Demonstrates
 
-[MIT](LICENSE)
+This project is a portfolio piece targeting mid-level and senior DevOps/Platform Engineering roles. It demonstrates:
+
+- Writing production Terraform across VPC, EKS, IAM, KMS, and Helm in a single coherent codebase
+- Designing a multi-phase CI/CD pipeline that handles real-world CRD bootstrapping race conditions
+- Implementing defence-in-depth: scanning before apply, policy enforcement at admission, network segmentation at runtime, and secret management through IRSA
+- Separating platform concerns (this repo) from application concerns (gitops repo) the way a real platform team would
+- Debugging live AWS account restrictions, Helm release failures, and Kyverno policy conflicts under real conditions — not a clean-room tutorial environment
+
+---
+
+## Author
+
+**George Dawson-Kesson** — AWS Certified Solutions Architect – Associate  
+Portfolio: [gdawsonkesson.com](https://gdawsonkesson.com)  
+GitHub: [QUOJO-DAWSON](https://github.com/QUOJO-DAWSON)
