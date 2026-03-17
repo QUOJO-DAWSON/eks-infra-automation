@@ -122,7 +122,13 @@ jobs:
           terraform plan -no-color -input=false -detailed-exitcode -out=tfplan \
             -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
             -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
-          true
+          exitcode=$?
+          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+          if [ "$exitcode" -eq 1 ]; then
+            echo "Terraform plan failed"
+            exit 1
+          fi
+          exit 0
 
       - name: Capture Plan Output
         run: terraform show -no-color tfplan > plan_output.txt
@@ -196,10 +202,6 @@ jobs:
               body
             });
 
-      - name: Fail if plan failed
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
-
   # --------------------------------------------------------------------------
   # Job 4: Apply (main branch only)
   # --------------------------------------------------------------------------
@@ -207,7 +209,7 @@ jobs:
     name: Apply Infrastructure
     runs-on: ubuntu-latest
     needs: terraform-plan
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.terraform-plan.outputs.plan-outcome == 'success'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Checkout
@@ -231,16 +233,26 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: GitHubActions-Apply
 
-      - name: Download Plan artifact
-        uses: actions/download-artifact@v4.3.0
-        with:
-          name: tfplan-${{ github.run_id }}
-
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+      - name: Phase 1 - Apply AWS Infrastructure
+        run: |
+          terraform apply -auto-approve \
+            -target=module.vpc \
+            -target=module.eks \
+            -target=aws_iam_role.external-admin \
+            -target=aws_iam_role.external-developer \
+            -target=aws_iam_role_policy_attachment.external-admin \
+            -target=aws_iam_role_policy_attachment.external-developer \
+            -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
+            -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
+
+      - name: Phase 2 - Apply Platform Add-ons
+        run: |
+          terraform apply -auto-approve \
+            -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
+            -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
 
       - name: Extract Cluster Name
         run: |
