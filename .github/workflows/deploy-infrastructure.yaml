@@ -122,6 +122,9 @@ jobs:
           terraform plan -no-color -input=false -detailed-exitcode -out=tfplan \
             -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
             -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
+          PLAN_EXIT=$?
+          if [ $PLAN_EXIT -eq 1 ]; then exit 1; fi
+          exit 0
 
       - name: Capture Plan Output
         run: terraform show -no-color tfplan > plan_output.txt
