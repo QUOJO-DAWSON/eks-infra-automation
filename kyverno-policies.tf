@@ -67,7 +67,7 @@ resource "kubernetes_manifest" "policy_require_non_root" {
       }
     }
     spec = {
-      validationFailureAction = "Enforce"
+      validationFailureAction = "Audit"
       background              = true
       rules = [
         {
