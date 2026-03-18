@@ -120,12 +120,6 @@ jobs:
         run: |
           set +e
           terraform plan -no-color -input=false -detailed-exitcode -out=tfplan \
-            -target=module.vpc \
-            -target=module.eks \
-            -target=aws_iam_role.external-admin \
-            -target=aws_iam_role.external-developer \
-            -target=aws_iam_role_policy_attachment.external-admin \
-            -target=aws_iam_role_policy_attachment.external-developer \
             -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
             -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
           exitcode=$?
