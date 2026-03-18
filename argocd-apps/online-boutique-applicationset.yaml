@@ -1,0 +1,42 @@
+﻿apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: online-boutique
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: dev
+            namespace: online-boutique
+            wave: "1"
+            autoSync: "true"
+          - env: staging
+            namespace: online-boutique-staging
+            wave: "2"
+            autoSync: "true"
+          - env: prod
+            namespace: online-boutique-prod
+            wave: "3"
+            autoSync: "false"
+  template:
+    metadata:
+      name: online-boutique-{{env}}
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/sync-wave: "{{wave}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/QUOJO-DAWSON/online-boutique-gitops.git
+        targetRevision: HEAD
+        path: overlays/{{env}}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
