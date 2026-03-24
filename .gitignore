@@ -4,3 +4,7 @@
 #ignore tf state files
 *.tfstate
 *.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
