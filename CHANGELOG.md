@@ -1,57 +1,56 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [1.0.0] - 2026-03-07
+## [v2.0.0] — March 2026 (Sprint 2)
 
 ### Added
-- Production-grade EKS cluster (v1.33) with managed node groups (t3.large, min:1, max:5)
-- Multi-AZ VPC with public and private subnets across 3 availability zones
-- Istio service mesh with mTLS enforcement across all services
-- ArgoCD GitOps managing cluster-resources and Online Boutique application
-- Prometheus + Grafana + AlertManager observability stack
-- AWS Load Balancer Controller for ALB provisioning
-- Cluster Autoscaler for automatic node scaling
-- External Secrets Operator integrated with AWS Secrets Manager via IRSA
-- Metrics Server for HPA metrics support
-- GitHub Actions CI/CD  bootstrap, deploy, destroy workflows
-- OIDC-based GitHub Actions auth  no stored AWS credentials
-- tfsec static security scanning on every push and PR
-- Terraform fmt check enforced in CI
-- PR plan comments with collapsible plan output
-- ADR-001: Istio over Linkerd and Cilium
-- ADR-002: ArgoCD GitOps over push-based CI/CD
-- ADR-003: External Secrets Operator over Sealed Secrets
-- Runbook: Istio troubleshooting
-- Runbook: Terraform operations
-- Prometheus SLO alert rules  node, workload, Istio, ArgoCD, Cluster Autoscaler
-- Grafana dashboard as code via ConfigMap (10 panels, auto-imported)
-- Variable validation blocks with clear error messages on all Terraform inputs
-- Expanded outputs.tf with configure_kubectl helper output
-- Architecture diagram embedded in README
-- Online Boutique (11 microservices) deployed via ArgoCD
-
-### Security
-- mTLS enforced across all inter-service traffic via Istio PeerAuthentication
-- Least-privilege IAM via IRSA  pod-level AWS access only
-- Zero secrets in Git  AWS Secrets Manager + External Secrets Operator
-- GitHub Actions uses OIDC AssumeRoleWithWebIdentity
-- sensitive = true on all IAM ARN Terraform variables
+- Kyverno 3.2.6 admission controller with five ClusterPolicies (disallow-privileged, disallow-host-namespaces, disallow-latest-tag, require-resource-limits, require-non-root-user)
+- Zero-trust NetworkPolicies for online-boutique namespace (default-deny-all with explicit allow rules)
+- AlertManager Slack routing with severity-based channels
+- PodDisruptionBudgets for all critical services
+- HPA manifests for all Online Boutique services
+- Istio fault injection runbook
+- Kustomize overlays for staging and prod environments
+- ArgoCD ApplicationSet replacing individual Application manifests
+- Phase 1.5 bootstrap step resolving Kyverno CRD race condition
+- Pre-phase 2 cleanup step for stuck Helm releases
+- Local IAM user EKS access entry
+- ExternalSecret and ClusterSecretStore for AWS Secrets Manager integration
+- Branch protection rule with required Terraform plan status check
+- Destroy workflow with confirmation gate
+- Sprint 2 verification screenshots in docs/screenshots/
 
 ### Fixed
-- Upgraded node instances from t2.large to t3.large
-- Removed personal project_name value from terraform.tfvars
+- AWS free-tier EC2 instance type restriction resolved via AWS Organization
+- Kyverno CRD race condition between Helm install and policy apply
+- Kyverno disallow-host-namespaces blocking Prometheus node-exporter
+- Stuck kube-prometheus-stack Helm release from failed prior run
+- ExternalSecret pointing to wrong ClusterSecretStore name
+- Malformed JSON in AWS Secrets Manager stripe-api-key secret
+
+### Changed
+- require-non-root-user policy set to Audit mode for upstream image compatibility
+- disallow-host-namespaces policy updated with system namespace exclusions
+- Terraform plan expanded to full config for accurate PR gate
 
 ---
 
-## [Unreleased]
+## [v1.0.0] — August 2025 (Sprint 1)
 
-### Planned
-- Multi-environment support via Terraform workspaces
-- Istio canary release workflow via VirtualService weight shifting
-- AlertManager notification routing to Slack
-- Terraform module extraction for reusability
+### Added
+- VPC with public and private subnets across 3 availability zones
+- EKS 1.33 managed node group with KMS encryption
+- OIDC-based IAM for GitHub Actions — zero stored credentials
+- S3 backend with native state locking
+- ArgoCD v3.1.0 Helm deployment
+- Istio 1.26.2 base, istiod, and ingress gateway
+- kube-prometheus-stack with Grafana and AlertManager
+- AWS Load Balancer Controller with IRSA
+- Cluster Autoscaler with IRSA
+- External Secrets Operator with IRSA
+- Metrics Server
+- GitHub Actions CI/CD pipeline with tfsec and Trivy scanning
+- Four-phase apply pipeline (security scan, validate/plan, apply)
