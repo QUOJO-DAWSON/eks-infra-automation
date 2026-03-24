@@ -234,6 +234,17 @@ Go to **Actions → Destroy Infrastructure → Run workflow** and type `DESTROY`
 
 ---
 
+## Environment Status
+
+This infrastructure was deployed and verified live in March 2026 then destroyed after Sprint 2 verification. Every component is fully redeployable via the pipeline — trigger the Deploy Infrastructure workflow to recreate the complete stack from Terraform state.
+
+**Last verified:** March 2026
+**Cluster:** eks-platform-eks-cluster
+**Region:** us-east-2
+**Status:** Destroyed after verification. Redeployable via Terraform pipeline.
+
+> Before redeploying, update `cluster_name` in `terraform.tfvars` to avoid naming conflicts with stale AWS resources from prior deployments.
+
 ## Known Issues & Honest Notes
 
 - **Kyverno cleanup CronJob ImagePullBackOff** — a known issue with Kyverno 3.2.6 cleanup controller image tags on certain registries. Core admission control is unaffected.
