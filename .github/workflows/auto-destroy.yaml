@@ -1,0 +1,114 @@
+﻿name: Auto-Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */4 * * *'
+
+env:
+  TF_VERSION: "1.12.0"
+  TF_IN_AUTOMATION: true
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+  notify:
+    name: Notify Before Destroy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post reminder issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Auto-Destroy Triggered — Take Screenshots Now',
+              body: [
+                '## Infrastructure Auto-Destroy Triggered',
+                '',
+                'The EKS cluster will be destroyed in **15 minutes**.',
+                '',
+                '### Before destroy completes, ensure you have:',
+                '- [ ] kubectl get nodes screenshot',
+                '- [ ] ArgoCD dashboard screenshot',
+                '- [ ] Grafana cluster metrics screenshot',
+                '- [ ] GitHub Actions green run screenshot',
+                '',
+                '### To cancel:',
+                'Disable the Auto-Destroy Infrastructure workflow in GitHub Actions before the destroy job starts.',
+                '',
+                `> Triggered at: ${new Date().toISOString()}`
+              ].join('\n'),
+              labels: ['infrastructure', 'auto-destroy']
+            });
+
+  wait:
+    name: Wait 15 Minutes
+    runs-on: ubuntu-latest
+    needs: notify
+    steps:
+      - name: Wait before destroy
+        run: |
+          echo "Waiting 15 minutes before destroying infrastructure..."
+          echo "Cancel this workflow now if you need more time."
+          sleep 900
+
+  destroy:
+    name: Destroy Infrastructure
+    runs-on: ubuntu-latest
+    needs: wait
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ACTIONS_AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActions-AutoDestroy
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Destroy
+        run: |
+          terraform destroy -auto-approve -lock=false \
+            -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
+            -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
+
+      - name: Post destroy confirmation
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Auto-Destroy Complete — Infrastructure Terminated',
+              body: [
+                '## Infrastructure Successfully Destroyed',
+                '',
+                'All AWS resources have been terminated.',
+                '',
+                '### Cost impact',
+                'No further charges will accrue from this deployment.',
+                '',
+                '### Next deployment',
+                'Update cluster_name in terraform.tfvars before redeploying to avoid naming conflicts with stale AWS resources.',
+                '',
+                `> Destroyed at: ${new Date().toISOString()}`
+              ].join('\n'),
+              labels: ['infrastructure', 'auto-destroy']
+            });
