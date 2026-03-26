@@ -40,6 +40,15 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Remove Kubernetes resources from state
+        run: |
+          echo "Removing Kubernetes manifest resources from state before destroy..."
+          echo "This prevents REST client errors when the cluster no longer exists."
+          for resource in $(terraform state list 2>/dev/null | grep -E "kubernetes_manifest|kubernetes_namespace|time_sleep"); do
+            echo "Removing $resource from state..."
+            terraform state rm "$resource" || true
+          done
+
       - name: Terraform Destroy
         run: |
           terraform destroy -auto-approve -lock=false \
