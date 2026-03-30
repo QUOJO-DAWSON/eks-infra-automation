@@ -8,7 +8,7 @@
 
 This repo provisions and manages a complete Kubernetes platform on AWS EKS — from the VPC up. It is not a tutorial follow-along. Every design decision reflects how platform teams at scale operate: security scanning in CI before a single resource is created, policy enforcement at admission time, GitOps as the only path to production, and observability baked in from day one.
 
-The platform runs the [Online Boutique](https://github.com/QUOJO-DAWSON/online-boutique-gitops) microservices application — an 11-service e-commerce demo — as the workload, with full Istio service mesh, HPA, PodDisruptionBudgets, and NetworkPolicies applied across the board.
+The platform runs the [Online Boutique](https://github.com/gdawsonkesson/online-boutique-gitops) microservices application — an 11-service e-commerce demo — as the workload, with full Istio service mesh, HPA, PodDisruptionBudgets, and NetworkPolicies applied across the board.
 
 ---
 
@@ -181,7 +181,7 @@ kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80
 
 ## GitOps
 
-ArgoCD manages the Online Boutique workload from a separate repo: [online-boutique-gitops](https://github.com/QUOJO-DAWSON/online-boutique-gitops)
+ArgoCD manages the Online Boutique workload from a separate repo: [online-boutique-gitops](https://github.com/gdawsonkesson/online-boutique-gitops)
 
 The platform repo provisions ArgoCD. The application repo defines what ArgoCD deploys. These concerns are intentionally separated — infrastructure engineers own this repo, application teams own theirs.
 ```
@@ -269,4 +269,4 @@ This project is a portfolio piece targeting mid-level and senior DevOps/Platform
 
 **George Dawson-Kesson** — AWS Certified Solutions Architect – Associate (SAA-C03)  
 Portfolio: [gdawsonkesson.com](https://gdawsonkesson.com)  
-GitHub: [QUOJO-DAWSON](https://github.com/QUOJO-DAWSON)
+GitHub: [gdawsonkesson](https://github.com/gdawsonkesson)
