@@ -119,7 +119,7 @@ jobs:
         id: plan
         run: |
           set +e
-          terraform plan -no-color -input=false -detailed-exitcode -out=tfplan \
+          terraform plan -no-color -input=false -detailed-exitcode -out=tfplan -refresh=false \
             -var="user_for_admin_role=${{ secrets.ADMIN_USER_ARN }}" \
             -var="user_for_dev_role=${{ secrets.DEV_USER_ARN }}"
           exitcode=$?
