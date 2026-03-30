@@ -1,4 +1,4 @@
-﻿terraform {
+terraform {
   backend "s3" {
     bucket       = "tf-state-eks-infra-271758791081"
     key          = "terraform.tfstate"
@@ -23,6 +23,10 @@
     time = {
       source  = "hashicorp/time"
       version = ">= 0.9"
+    }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = ">= 1.14"
     }
   }
 }
