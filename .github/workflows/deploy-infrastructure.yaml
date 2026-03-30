@@ -1,4 +1,4 @@
-﻿name: Deploy Infrastructure
+name: Deploy Infrastructure
 
 on:
   push:
@@ -85,6 +85,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
 
       - name: Create Terraform plugin cache directory
         run: mkdir -p ~/.terraform.d/plugin-cache
@@ -219,6 +220,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
 
       - name: Restore Terraform provider cache
         uses: actions/cache@v4.2.3
