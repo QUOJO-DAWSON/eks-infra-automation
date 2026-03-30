@@ -116,6 +116,14 @@ jobs:
         id: validate
         run: terraform validate -no-color
 
+      - name: Remove Kubernetes resources from state
+        run: |
+          terraform state list 2>/dev/null | grep -E "^kubernetes_" | while read resource; do
+            echo "Removing: $resource"
+            terraform state rm "$resource" 2>/dev/null || true
+          done
+          echo "State cleanup complete."
+
       - name: Terraform Plan
         id: plan
         run: |
