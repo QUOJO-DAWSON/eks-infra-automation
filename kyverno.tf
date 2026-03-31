@@ -1,4 +1,4 @@
-﻿resource "helm_release" "kyverno" {
+resource "helm_release" "kyverno" {
   name             = "kyverno"
   repository       = "https://kyverno.github.io/kyverno/"
   chart            = "kyverno"

@@ -1,4 +1,4 @@
-﻿# -- Cluster ------------------------------------------------------------------
+# -- Cluster ------------------------------------------------------------------
 output "cluster_name" {
   description = "Name of the EKS cluster. Used by CI/CD to configure kubectl and by monitoring for cluster identification."
   value       = module.eks.cluster_name

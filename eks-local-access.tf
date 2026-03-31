@@ -1,4 +1,4 @@
-﻿resource "aws_eks_access_entry" "local_admin" {
+resource "aws_eks_access_entry" "local_admin" {
   cluster_name  = module.eks.cluster_name
   principal_arn = "arn:aws:iam::271758791081:user/devops-practise-q"
   type          = "STANDARD"

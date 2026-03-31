@@ -1,4 +1,4 @@
-﻿# IMPORTANT — State Drift Notice
+# IMPORTANT — State Drift Notice
 # Infrastructure was manually terminated in March 2026 outside of Terraform.
 # Before next apply, run: terraform state list
 # Remove any drifted resources with: terraform state rm <resource>
@@ -17,4 +17,4 @@ environment        = "dev"
 node_group_instance_types = ["t3.medium"]
 node_group_min_size       = 1
 node_group_max_size       = 5
-node_group_desired_size = 1
+node_group_desired_size   = 1
